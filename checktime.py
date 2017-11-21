@@ -86,12 +86,11 @@ def constructICMP_ECHO_REQUEST_Packet(seq, packetsize=56):
 
 
 # Construct an ICMP Time Stamp Request
-def constructICMP_TIMESTAMP_REQUEST_Packet(seq, packetsize=56):
-  padding = (packetsize - (3 * _L_size)) * b'Q'
+def constructICMP_TIMESTAMP_REQUEST_Packet(seq):
   originateTime = struct.pack('!L', calcTimeSinceUTC_Midnight())
   receiveTime = struct.pack('!L', 0)
   transmitTime = struct.pack('!L', 0)
-  return constructICMP_Datagram(ICMP_TIMESTAMP_REQUEST, seq, originateTime + receiveTime + transmitTime + padding)
+  return constructICMP_Datagram(ICMP_TIMESTAMP_REQUEST, seq, originateTime + receiveTime + transmitTime )
 
 
 # Print a Hex dump of a string of data
@@ -242,13 +241,6 @@ def socket():
     return _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM, _socket.IPPROTO_ICMP)
 
 
-def selectSocket(dgram):
-  if dgram:
-    return _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM, _socket.IPPROTO_ICMP)
-  else:
-    return _socket.socket(_socket.AF_INET, _socket.SOCK_RAW, _socket.IPPROTO_ICMP)
-
-
 def pingWithICMP_ECHO_REQUEST_Packet(address, optns):
   if optns["verbose"]:
     print '\nAttempting to get ICMP echo (ping) from "%s"' % address,
@@ -258,7 +250,7 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, optns):
       if address != str(addr):
         print '(', addr, ')',
       print
-    s = selectSocket(optns["dgram"])
+    s = socket()
     s.settimeout(2)
   # Build an ICMP Echo Request Packet
     pingPacket = constructICMP_ECHO_REQUEST_Packet(1)
@@ -295,7 +287,7 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, optns):
       if address != str(addr):
         print '(', addr, ')',
       print
-    s = socket()
+    s = socket() # Attempt to open a socket
     s.settimeout(2)
   # Build an ICMP Timestamp Request Packet
     icmpPacket = constructICMP_TIMESTAMP_REQUEST_Packet(1)
