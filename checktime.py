@@ -322,7 +322,7 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, optns):
         break
     return t
   except _socket.error, msg:
-    print '\n?? An error occurred:', msg, '\n'
+    print 'Unable to get ICMP timestamp due to:', msg, '\n'
     return 999999
 
 
