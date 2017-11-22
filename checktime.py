@@ -54,6 +54,15 @@ def calcTimeSinceUTC_Midnight():
   return millisecondsSinceMidnight
 
 
+def convertMillisecondsSinceMidnight( milliseconds ):
+  msecs = milliseconds % 1000L
+  hrs = milliseconds / 3600000L
+  mins = ( milliseconds - ( hrs * 3600000L )) / 60000L
+  secs = ( milliseconds - ( hrs * 3600000L + mins * 60000L )) / 1000L
+  mS_Time = { "hours" : hrs, "minutes" : mins, "seconds" : secs, "milliSeconds" : msecs }
+  return mS_Time
+
+
 # Calculate 16 bit check sum for a data string
 #  (mostly borrowed from scapy's utils.py)
 def calcChecksum(dataString):
@@ -221,9 +230,14 @@ def parseICMP_TIMESTAMP_REPLY_Packet(data, optns):
           else:
             timeDiff = tt - ot
             if optns["debug"]:
-              print "\nOriginate timestamp was", ot
-              print "Received timestamp was", rt
-              print "Transmit Timestamp was", tt
+              print '\nOriginate timestamp was %ld (0x%08x)' % (ot, ot)
+              print 'Received timestamp was %ld (0x%08x)' % (rt, rt)
+              print 'Transmit Timestamp was %ld (0x%08x)' % (tt, tt)
+            if optns["verbose"]:
+              otTm = convertMillisecondsSinceMidnight(ot)
+              print 'Time since midnight UTC sent was %02ld:%02ld:%02ld.%03ld' % (otTm["hours"],otTm["minutes"],otTm["seconds"],otTm["milliSeconds"])
+              ttTm = convertMillisecondsSinceMidnight(tt)
+              print 'Time since midnight UTC received was %02ld:%02ld:%02ld.%03ld' % (ttTm["hours"],ttTm["minutes"],ttTm["seconds"],ttTm["milliSeconds"])
     else:
       print "?? Expected at least 12 character reply & got", len(payload)
   else:
@@ -271,6 +285,7 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, optns):
       else:
         ICMP_EchoRequestTimeStamp = parseICMP_ECHO_REPLY_PacketWithTimeStamp(packet, optns)
         if ICMP_EchoRequestTimeStamp != 0:
+          s.close()
           break
     return recvTime - ICMP_EchoRequestTimeStamp
   except _socket.error, msg:
@@ -303,6 +318,7 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, optns):
       recvTime = _time.time()
       _, t = parseICMP_TIMESTAMP_REPLY_Packet(packet, optns)
       if t != 999999:
+        s.close()
         break
     return t
   except _socket.error, msg:
@@ -396,8 +412,4 @@ def main():
 
 if __name__ == '__main__':
   main()
-
-
-
-
 
