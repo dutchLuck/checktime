@@ -201,6 +201,22 @@ def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
       print '\n?? ICMP (type %d) packet returned is not an ICMP Echo Reply' % hdr["icmpType"]
   return timeStamp
 
+def informUserAboutTimestamp( msg, timeStamp ):
+  print msg, 'timestamp returned was',
+  tsTm = convertMillisecondsSinceMidnight(timeStamp)
+  print '%02ld:%02ld:%02ld.%03ld' % (tsTm["hours"],tsTm["minutes"],tsTm["seconds"],tsTm["milliSeconds"]),
+  print '(%ld (0x%08x))' % (timeStamp, timeStamp)
+
+
+def informUserAboutTimestamps( timestamps ):
+  informUserAboutTimestamp('Originate', timestamps["originate"])
+  informUserAboutTimestamp('Received', timestamps["received"])
+  informUserAboutTimestamp('Transmit', timestamps["transmit"])
+
+
+def informUserAboutTimestampProblem( msg, timeStamps ):
+  print "\n?? ", msg
+  informUserAboutTimestamps( timeStamps )
 
 def parseICMP_TIMESTAMP_REPLY_Packet(data, optns):
   _, icmpData = parseIP4_PacketHeader(data, optns)
@@ -213,31 +229,19 @@ def parseICMP_TIMESTAMP_REPLY_Packet(data, optns):
       printDataStringInHex(payload)
     if len(payload) >= 12:
       ot, rt, tt = struct.unpack('!lll', payload[:12])
+      tmStmps = { "originate" : ot, "received" : rt, "transmit" : tt }
       if tt < 0:
-        print "\n?? Non-standard transmit timestamp returned", tt
-        print "   Received timestamp returned was", rt
-        print "   Originate timestamp returned was", ot
+        informUserAboutTimestampProblem('Non-standard transmit timestamp returned', tmStmps)
       else:
         if tt == 0:
-          print "\n?? Zero or no transmit timestamp returned", tt
-          print "   Received timestamp returned was", rt
-          print "   Originate timestamp returned was", ot
+          informUserAboutTimestampProblem('Zero or no transmit timestamp returned', tmStmps)
         else:
           if tt > 86400000:
-            print "\n?? timestamp returned is greater than the maximum mS in day", tt
-            print "   Received timestamp returned was", rt
-            print "   Originate timestamp returned was", ot
+            informUserAboutTimestampProblem('timestamp returned is greater than the maximum mS in day', tmStmps)
           else:
             timeDiff = tt - ot
-            if optns["debug"]:
-              print '\nOriginate timestamp was %ld (0x%08x)' % (ot, ot)
-              print 'Received timestamp was %ld (0x%08x)' % (rt, rt)
-              print 'Transmit Timestamp was %ld (0x%08x)' % (tt, tt)
             if optns["verbose"]:
-              otTm = convertMillisecondsSinceMidnight(ot)
-              print 'Time since midnight UTC sent was %02ld:%02ld:%02ld.%03ld' % (otTm["hours"],otTm["minutes"],otTm["seconds"],otTm["milliSeconds"])
-              ttTm = convertMillisecondsSinceMidnight(tt)
-              print 'Time since midnight UTC received was %02ld:%02ld:%02ld.%03ld' % (ttTm["hours"],ttTm["minutes"],ttTm["seconds"],ttTm["milliSeconds"])
+              informUserAboutTimestamps( tmStmps )
     else:
       print "?? Expected at least 12 character reply & got", len(payload)
   else:
