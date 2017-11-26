@@ -176,6 +176,7 @@ def parseICMP_Data(data):
   ICMP_Header = {"ICMP_Type":type,"code":code,"checksum":checksum,"id":id,"sequence":sequence}
   if chckSum != 0:
     print '\n?? The ICMP check sum test failed (it calculates to 0x%04x, not 0)' % chckSum
+    printICMP_Header(ICMP_Header)
   return ICMP_Header, data[8:]
 
 
@@ -336,14 +337,14 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, optns):
             print 'Received a non-ICMP (0x%02x) packet from %s' % (ip4_Hdr["prot"],peer[0])
         else:
           icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
-          if icmpHdr["sequence"] != originateSequenceNumber:  # Ignore the icmp data if sequence number doesn't match
-            if optns["verbose"]:
-              print "Received an ICMP datagram, but the sequence number 0x%04x doesn't match" % icmpHdr["sequence"]
-          elif icmpHdr["ICMP_Type"] != ICMP_TIMESTAMP_REPLY:  # Ignore other kinds of ICMP
+          if icmpHdr["ICMP_Type"] != ICMP_TIMESTAMP_REPLY:  # Ignore other kinds of ICMP
             if optns["verbose"]:
               print 'Received an ICMP datagram, but it is not an ICMP Timestamp Reply'
               printICMP_Header(icmpHdr)
               printDataStringInHex(icmpPayload)
+          elif icmpHdr["sequence"] != originateSequenceNumber:  # Ignore the icmp data if sequence number does not match
+            if optns["verbose"]:
+              print 'Received an ICMP timestamp reply datagram, but the sequence number 0x%04x does not match' % icmpHdr["sequence"]
           else:
             tStamps, tDiff = parseICMP_TIMESTAMP_REPLY_Packet(icmpHdr, icmpPayload, optns)
             if tDiff != 999999l:

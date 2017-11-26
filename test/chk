@@ -1,0 +1,18 @@
+#! /bin/sh
+#
+#
+#
+echo
+echo ----------- Successful
+./checktime.py tic.ntp.telstra.net toc.ntp.telstra.net
+./checktime.py time.optus.net clock.exetel.com.au ntp.internode.on.net
+./checktime.py ntp.sydney.nmi.gov.au ntp.melbourne.nmi.gov.au
+#
+#
+#
+echo
+echo ---------- Unsuccessful so far
+./checktime.py time.iinet.com.au
+./checktime.py ntp.tpg.com.au
+./checktime.py ntp.aussiebroadband.com.au
+./checktime.py time.apple.com
