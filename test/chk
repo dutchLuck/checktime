@@ -10,6 +10,7 @@ echo ----------- Successful --Ping and Timestamp work--
 # ./checktime.py ntp.sydney.nmi.gov.au ntp.melbourne.nmi.gov.au ntp.adelaide.nmi.gov.au ntp.brisbane.nmi.gov.au
 # ./checktime.py ntp1.sp.se time1.stupi.se
 # ./checktime.py time.apple.asia.com
+./checktime.py www.vodafone.com.au www.optus.com.au www.abc.net.au www.commbank.com.au
 #
 #
 echo
@@ -20,7 +21,7 @@ echo ---------- Unsuccessful so far --Destination Unreachable--
 echo
 echo ---------- Unsuccessful so far --Ping, but no Timestamp--
 ./checktime.py time.google.com
-./checktime.py ntp.tpg.com.au
+./checktime.py ntp.tpg.com.au www.telstra.com.au
 # ./checktime.py ntp.aussiebroadband.com.au
 # ./checktime.py time.apple.com time.asia.apple.com time.apple.nz.com
 # ./checktime.py ntp.adam.com.au
