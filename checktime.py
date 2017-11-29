@@ -113,6 +113,22 @@ def printDataStringInHex(dataString):
   print
 
 
+# Compare two strings of data up to the length of the shorter data string
+def compareDataStrings(dataStr1,dataStr2):
+  result = True
+  length = len(dataStr1)
+  len2 = len(dataStr2)
+  if length > len2:
+    length = len2
+  length -= 1
+  while length >= 0:
+    if dataStr1[length] != dataStr2[length]:
+      result = False
+      length = -1
+    length -= 1
+  return result
+
+
 # Print the header part of a version 4 IP packet
 def printIP4_Header(header):
   print 'IP ver .. ', (header["ver"] >> 4)
@@ -150,10 +166,11 @@ def parseIP4_PacketHeader(data, options):
 	 "s1" : s1, "s2" : s2, "s3" : s3, "s4" : s4,
 	 "d1" : d1, "d2" : d2, "d3" : d3, "d4" : d4 }
   if chckSum != 0:
-    print '\n?? The packet check sum calculates to 0x%04x not zero' % chckSum
-    print '\nPacket',
-    printDataStringInHex(data)
-    printIP4_Header(ipv4Hdr)
+    print '\n?? The IPv4 packet check sum calculates to 0x%04x not zero' % chckSum
+    if options["verbose"]:
+      print '\nPacket',
+      printDataStringInHex(data)
+      printIP4_Header(ipv4Hdr)
   elif options["debug"]:
     print '\nThe IPv4 packet received is; -'
     printIP4_Header(ipv4Hdr)
@@ -176,7 +193,8 @@ def parseICMP_Data(data):
   ICMP_Header = {"ICMP_Type":type,"code":code,"checksum":checksum,"id":id,"sequence":sequence}
   if chckSum != 0:
     print '\n?? The ICMP check sum test failed (it calculates to 0x%04x, not 0)' % chckSum
-    printICMP_Header(ICMP_Header)
+    if options["debug"]:
+      printICMP_Header(ICMP_Header)
   return ICMP_Header, data[8:]
 
 
@@ -201,6 +219,7 @@ def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
     if optns["verbose"]:
       print '\n?? ICMP (type %d) packet returned is not an ICMP Echo Reply' % hdr["icmpType"]
   return timeStamp
+
 
 def informUserAboutTimestamp( msg, timeStamp ):
   print msg, 'timestamp returned was',
@@ -260,15 +279,18 @@ def socket():
     return _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM, _socket.IPPROTO_ICMP)
 
 
-def pingWithICMP_ECHO_REQUEST_Packet(address, optns):
+def printTargetNameAndOrIP_Address(name,ipAddress):
+  print '"%s"' % name,
+  if name != str(ipAddress):
+    print '(%s)' % str(ipAddress),
+
+
+def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
   if optns["verbose"]:
-    print '\nAttempting to get ICMP echo (ping) from "%s"' % address,
+    print '\nAttempting to get ICMP echo (ping) from',
+    printTargetNameAndOrIP_Address(address, addr)
+    print
   try:
-    addr = _socket.gethostbyname(address)
-    if optns["verbose"]:
-      if address != str(addr):
-        print '(', addr, ')',
-      print
     s = socket()
     s.settimeout(2)
   # Build an ICMP Echo Request Packet
@@ -296,20 +318,20 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, optns):
           break
     return recvTime - ICMP_EchoRequestTimeStamp
   except _socket.error, msg:
-    print '\n?? An error occurred:', msg, '\n'
+    if optns["verbose"]:
+      print '?? An error occurred in the Ping',
+      printTargetNameAndOrIP_Address(address,addr)
+      print 'attempt:', msg
     return 9.999999
 
 
-def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, optns):
+def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
   tDiff = 999999l
+  if optns["verbose"]:
+    print '\nAttempting to get ICMP timestamp from',
+    printTargetNameAndOrIP_Address(address, addr)
+    print
   try:
-    if optns["verbose"]:
-      print '\nAttempting to get ICMP timestamp from "%s"' % address,
-    addr = _socket.gethostbyname(address)
-    if optns["verbose"]:
-      if address != str(addr):
-        print '(', addr, ')',
-      print
     s = socket() # Attempt to open a socket
     s.settimeout(2)
   # Build an ICMP Timestamp Request Packet
@@ -323,15 +345,30 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, optns):
     s.sendto(icmpPacket, (addr, 0))
   # Loop until we get an ICMP datagram from the target computer
     while True:
-      packet, peer = s.recvfrom(2048)
+      receivedPacket, peer = s.recvfrom(2048)
       recvTime = _time.time()
+      ip4_Hdr, ip4_Data = parseIP4_PacketHeader(receivedPacket, optns)
+      if ip4_Hdr["prot"] == 0x01:  # Ignore the current packet if it is not ICMP
+        icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
+        if optns["debug"]:
+          print 'Received an ICMP (%d (0x%02x)) packet from %s' % (icmpHdr["ICMP_Type"],icmpHdr["ICMP_Type"],peer[0])
+        if icmpHdr["ICMP_Type"] == ICMP_DESTINATION_UNREACHABLE:  # Check for Error Indication
+          errPktHdr, errPktPayload = parseIP4_PacketHeader(icmpPayload, optns)
+          if optns["debug"]:
+            printIP4_Header(errPktHdr)
+            printDataStringInHex(errPktPayload)
+          if errPktHdr["prot"] == 0x01:
+            errPktPayloadAsICMP_Hdr, _ = parseICMP_Data(errPktPayload)
+            if optns["debug"]:
+              printICMP_Header(errPktPayloadAsICMP_Hdr)
+            if compareDataStrings(errPktPayload,icmpPacket):
+              break 
       if peer[0] != addr:  # Ignore the current packet if it is not from the target machine
         if optns["verbose"]:
           print 'Received a packet from %s but not from %s' % (peer[0],addr)
           if optns["debug"]:
             printDataStringInHex(packet)
       else:
-        ip4_Hdr, ip4_Data = parseIP4_PacketHeader(packet, optns)
         if ip4_Hdr["prot"] != 0x01:  # Ignore the current packet if it is not ICMP
           if optns["verbose"]:
             print 'Received a non-ICMP (0x%02x) packet from %s' % (ip4_Hdr["prot"],peer[0])
@@ -353,7 +390,8 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, optns):
               informUserAboutTimestamp('Transmit', tStamps["transmit"])
               break
   except _socket.error, msg:
-    print 'Unable to get ICMP timestamp due to:', msg, '\n'
+    if optns["verbose"]:
+      print 'Unable to get ICMP timestamp due to:', msg, '\n'
   finally:
     return tDiff
 
@@ -405,18 +443,31 @@ def processCommandLine():
   return args
  
 
-def printPingTime( trgtAddr, startTime ): 
-  travelTime = pingWithICMP_ECHO_REQUEST_Packet(trgtAddr, options)  # Ping the specified computer
-  if travelTime <= (getClockTime() - startTime):  # If Ping fails then the travel time is deliberatly set large
-    if options["verbose"]:
-	  print 'Ping round trip time to "%s" was: %9.3f mS.' % (trgtAddr,travelTime * 1000)
-  else:
-    print 'ping "%s" failed' % trgtAddr
-  osTimeDiff = pingWithICMP_TIMESTAMP_REQUEST_Packet(trgtAddr, options)
-  if osTimeDiff != 999999l:  # If icmp timestamp request fails then the time difference is deliberatly set large
-    print '"%s" Transmit - Originate timestamps time difference was: %ld mS' % (trgtAddr,osTimeDiff)
-  else:
-    print 'timestamp request to "%s" failed' % trgtAddr
+def printPingTime( trgtAddr, startTime ):
+  try:
+# Turn Target Computer name into an IP Address if a name was specified
+    trgtIP_Addr = _socket.gethostbyname(trgtAddr)
+# Ping the specified computer
+    travelTime = pingWithICMP_ECHO_REQUEST_Packet(trgtAddr, trgtIP_Addr, options)
+    if travelTime <= (getClockTime() - startTime):  # If Ping fails then the travel time is deliberatly set large
+      if options["verbose"]:
+	print 'Ping round trip time to "%s" was: %9.3f mS.' % (trgtAddr,travelTime * 1000)
+    else:
+      print 'ping',
+      printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
+      print 'failed'
+# Get Timestamp from the specified computer
+    osTimeDiff = pingWithICMP_TIMESTAMP_REQUEST_Packet(trgtAddr, trgtIP_Addr, options)
+    if osTimeDiff != 999999l:  # If icmp timestamp request fails then the time difference is deliberatly set large
+      print '"%s" Transmit - Originate timestamps time difference was: %ld mS' % (trgtAddr,osTimeDiff)
+    else:
+      print 'timestamp request to',
+      printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
+      print 'failed'
+  except _socket.error, msg:
+    print 'Target Computer "%s"' % trgtAddr,
+    print 'problem; -'
+    print ' "%s"' %  msg
 
 
 def main():

@@ -1,18 +1,38 @@
 #! /bin/sh
 #
-#
+# C H K
 #
 echo
-echo ----------- Successful
+echo ----------- Successful --Ping and Timestamp work--
+./checktime.py 10.0.0.138
 ./checktime.py tic.ntp.telstra.net toc.ntp.telstra.net
-./checktime.py time.optus.net clock.exetel.com.au ntp.internode.on.net
-./checktime.py ntp.sydney.nmi.gov.au ntp.melbourne.nmi.gov.au
-#
+# ./checktime.py time.optus.net clock.exetel.com.au ntp.internode.on.net ntp.iprimus.com.au
+# ./checktime.py ntp.sydney.nmi.gov.au ntp.melbourne.nmi.gov.au ntp.adelaide.nmi.gov.au ntp.brisbane.nmi.gov.au
+# ./checktime.py ntp1.sp.se time1.stupi.se
+# ./checktime.py time.apple.asia.com
 #
 #
 echo
-echo ---------- Unsuccessful so far
+echo ---------- Unsuccessful so far --Destination Unreachable--
 ./checktime.py time.iinet.com.au
+#
+#
+echo
+echo ---------- Unsuccessful so far --Ping, but no Timestamp--
+./checktime.py time.google.com
 ./checktime.py ntp.tpg.com.au
-./checktime.py ntp.aussiebroadband.com.au
-./checktime.py time.apple.com
+# ./checktime.py ntp.aussiebroadband.com.au
+# ./checktime.py time.apple.com time.asia.apple.com time.apple.nz.com
+# ./checktime.py ntp.adam.com.au
+#
+#
+echo
+echo ---------- Unsuccessful so far --No Ping and no Timestamp, but DNS ok--
+./checktime.py time.windows.com
+./checktime.py ntp.perth.nmi.gov.au
+#
+#
+echo
+echo ---------- Unsuccessful on purpose --Test No DNS for name--
+./checktime.py time.microsoft.com
+
