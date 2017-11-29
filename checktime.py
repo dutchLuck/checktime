@@ -304,8 +304,8 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
       printICMP_Header(ICMP_Hdr)
       printDataStringInHex(ICMP_Payload)
   # Send the ICMP Echo Request
-      sentTime = getClockTime()
-      s.sendto(pingPacket, (addr, 0))
+    sentTime = getClockTime()
+    s.sendto(pingPacket, (addr, 0))
   # Loop until we get an ICMP Echo Reply Packet or time out
     while True:
       packet, peer = s.recvfrom(2048)
