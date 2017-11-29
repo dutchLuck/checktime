@@ -252,7 +252,7 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
   if len(payload) < 12:  # Check length of data which should contain 3 timestamps
     print "?? Expected at least 3 * 4 byte reply, but got", len(payload)
     if optns["verbose"]:
-      printDataStringInHex(data)
+      printDataStringInHex(payoad)
   else:
     ot, rt, tt = struct.unpack('!lll', payload[:12])  # unpack in standard network order
     tmStmps = { "originate" : ot, "received" : rt, "transmit" : tt }
@@ -271,9 +271,12 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
   return tmStmps, timeDiff
 
 
-# Use a Raw Socket (SOCK_RAW) by default, but use SOCK_DGRAM if on Apple Mac OSX 
+# Use a Raw Socket (SOCK_RAW) by default, but use SOCK_DGRAM if on Apple Mac OSX
+# or forced by the dgram option
 def socket():
-  if sys.platform != 'darwin':
+  if options["dgram"]:
+    return _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM, _socket.IPPROTO_ICMP)
+  elif sys.platform != 'darwin':
     return _socket.socket(_socket.AF_INET, _socket.SOCK_RAW, _socket.IPPROTO_ICMP)
   else:
     return _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM, _socket.IPPROTO_ICMP)
@@ -301,7 +304,8 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
       printICMP_Header(ICMP_Hdr)
       printDataStringInHex(ICMP_Payload)
   # Send the ICMP Echo Request
-    s.sendto(pingPacket, (addr, 0))
+      sentTime = getClockTime()
+      s.sendto(pingPacket, (addr, 0))
   # Loop until we get an ICMP Echo Reply Packet or time out
     while True:
       packet, peer = s.recvfrom(2048)
@@ -316,7 +320,7 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
         if ICMP_EchoRequestTimeStamp != 0:
           s.close()
           break
-    return recvTime - ICMP_EchoRequestTimeStamp
+    return recvTime - sentTime
   except _socket.error, msg:
     if optns["verbose"]:
       print '?? An error occurred in the Ping',
@@ -342,11 +346,12 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
       ICMP_Hdr, ICMP_Payload = parseICMP_Data(icmpPacket)
       printICMP_Header(ICMP_Hdr)
       printDataStringInHex(ICMP_Payload)
+    sentTime = getClockTime()
     s.sendto(icmpPacket, (addr, 0))
   # Loop until we get an ICMP datagram from the target computer
     while True:
       receivedPacket, peer = s.recvfrom(2048)
-      recvTime = _time.time()
+      recvTime = getClockTime()
       ip4_Hdr, ip4_Data = parseIP4_PacketHeader(receivedPacket, optns)
       if ip4_Hdr["prot"] == 0x01:  # Ignore the current packet if it is not ICMP
         icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
