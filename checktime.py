@@ -217,7 +217,7 @@ def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
   else:
     timeStamp = 0
     if optns["verbose"]:
-      print '\n?? ICMP (type %d) packet returned is not an ICMP Echo Reply' % hdr["icmpType"]
+      print '\n?? ICMP (type %d) packet returned is not an ICMP Echo Reply' % hdr["ICMP_Type"]
   return timeStamp
 
 

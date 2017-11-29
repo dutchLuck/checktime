@@ -10,12 +10,14 @@ echo ----------- Successful --Ping and Timestamp work--
 # ./checktime.py ntp.sydney.nmi.gov.au ntp.melbourne.nmi.gov.au ntp.adelaide.nmi.gov.au ntp.brisbane.nmi.gov.au
 # ./checktime.py ntp1.sp.se time1.stupi.se
 # ./checktime.py time.apple.asia.com
-./checktime.py www.vodafone.com.au www.optus.com.au www.abc.net.au www.commbank.com.au
+# ./checktime.py www.vodafone.com.au www.optus.com.au www.abc.net.au www.commbank.com.au
+./checktime.py www.freebsd.com www.netbsd.org
 #
 #
 echo
 echo ---------- Unsuccessful so far --Destination Unreachable--
 ./checktime.py time.iinet.com.au
+./checktime.py www.openbsd.org
 #
 #
 echo
