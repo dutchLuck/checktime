@@ -1,0 +1,1 @@
+netsh firewall set icmpsetting 13 enable

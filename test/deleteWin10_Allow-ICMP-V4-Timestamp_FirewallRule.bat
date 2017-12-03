@@ -1,0 +1,1 @@
+netsh advfirewall firewall delete rule name="Allow-ICMP-V4-Timestamp" protocol=icmpv4:13,0 dir=in

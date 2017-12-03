@@ -2,6 +2,8 @@
 #
 # C H K
 #
+# Last modified on Sun Dec  3 17:26:21 2017 
+#
 #
 SYS_TYPE=`uname -s`
 #
@@ -24,6 +26,10 @@ $PROG_UNDER_TEST 10.0.0.138
 ####  netsh firewall set icmpsetting 13 enable
 ####  netsh firewall set icmpsetting 8 enable
 # $PROG_UNDER_TEST -r 10.0.0.84
+####
+#### Local Windows 10 Home computer, after ensuring timestamp is on with; -
+####  netsh advfirewall firewall add rule name="Allow-ICMP-V4-Timestamp" protocol=icmpv4:13,0 dir=in action=allow
+# $PROG_UNDER_TEST -r 10.0.0.62
 ####
 #### Local Android Phone
 # $PROG_UNDER_TEST android-ae6a6ccb5592abd3
@@ -71,6 +77,11 @@ echo ---------- Unsuccessful so far --Ping works, but no Timestamp--
 #### and ensure Ping (echo) is on with; -
 ####  netsh firewall set icmpsetting 8 enable
 # $PROG_UNDER_TEST -r 10.0.0.84
+####
+#### Local Windows 10 Home computer, after ensuring previously created firewall
+#### rule allowing timestamp is removed with; -
+####  netsh advfirewall firewall delete rule name="Allow-ICMP-V4-Timestamp" protocol=icmpv4:13,0 dir=in
+# $PROG_UNDER_TEST -r 10.0.0.62
 ####
 #### Local Apple iPad tablet
 # $PROG_UNDER_TEST iPad
