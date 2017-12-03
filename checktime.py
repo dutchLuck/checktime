@@ -154,20 +154,27 @@ def parseIP4_PacketHeader(data, options):
   hdr_len = (ver & 0xf) * 4
   ver = (ver >> 4) & 0xf
   ipv4Hdr = { "ver" : ver, "hdr_len" : hdr_len, "dscp" : dscp, "totl_len" : totl_len, "pkt_id" : pkt_id, "frag" : frag,
-	 "ttl" : ttl, "prot" : prot, "csum" : csum,
-	 "s1" : s1, "s2" : s2, "s3" : s3, "s4" : s4,
-	 "d1" : d1, "d2" : d2, "d3" : d3, "d4" : d4 }
+    "ttl" : ttl, "prot" : prot, "csum" : csum,
+    "s1" : s1, "s2" : s2, "s3" : s3, "s4" : s4,
+    "d1" : d1, "d2" : d2, "d3" : d3, "d4" : d4 }
   return ipv4Hdr, data[hdr_len:]
+
+
+# Uncook the header on a Mac
+def uncookIP4_PacketHeaderIfRequired(inData):
+  if sys.platform == 'darwin':  # Undo MacOS cooking some IP4 header fields
+    ver, dscp, tl1, tl2, b1, b2, fragLen = struct.unpack('=BBBBBBH', inData[:8])
+    totalLen = 256 * tl2 + tl1 + ((ver & 0xf) * 4)
+    tmpData = struct.pack('!BBHBBH', ver, dscp, totalLen, b1, b2, fragLen)
+    return tmpData + inData[8:]
+  else:
+    return inData
 
 
 # Unpack and Check the header of a version 4 IP packet
 def parseAndCheckIP4_PacketHeader(data, options):
-  if sys.platform == 'darwin':  # Undo MacOS cooking some IP4 header fields
-    ver, dscp, totalLen, b1, b2, fragLen = struct.unpack('=BBHBBH', data[:8])
-    totalLen = totalLen + ((ver & 0xf) * 4)
-    tmpData = struct.pack('!BBHBBH', ver, dscp, totalLen, b1, b2, fragLen)
-    data = tmpData + data[8:]
-  parsedIPv4_Hdr, parsedIPv4_payload = parseIP4_PacketHeader(data, options)
+  data = uncookIP4_PacketHeaderIfRequired(data)
+  parsedIPv4_Hdr, parsedIPv4_Payload = parseIP4_PacketHeader(data, options)
 # Check to see if the local interface is being used; i.e. src == dest
   srcAddr, destAddr = struct.unpack('!LL', data[12:20])
 # If local interface then don't check the checksum of the packet
@@ -178,7 +185,7 @@ def parseAndCheckIP4_PacketHeader(data, options):
   if chckSum != 0:
     print '\n?? The IPv4 packet check sum calculates to 0x%04x not zero' % chckSum
   if options["verbose"]:
-    print '\nThe IPv4 packet received was; -',
+    print '\nThe IPv4 packet received was; -'
     printIP4_Header(parsedIPv4_Hdr)
     printDataStringInHex(data)
   return parsedIPv4_Hdr, parsedIPv4_Payload
@@ -364,8 +371,10 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
         if optns["debug"]:
           print 'Received an ICMP (%d (0x%02x)) packet from %s' % (icmpHdr["ICMP_Type"],icmpHdr["ICMP_Type"],peer[0])
         if icmpHdr["ICMP_Type"] == ICMP_DESTINATION_UNREACHABLE:  # Check for Error Indication
-          errPktHdr, errPktPayload = parseAndCheckIP4_PacketHeader(icmpPayload, optns)
+          icmpPayload = uncookIP4_PacketHeaderIfRequired(icmpPayload)
+          errPktHdr, errPktPayload = parseIP4_PacketHeader(icmpPayload, optns)
           if optns["debug"]:
+            print 'Received an ICMP Destination Unreachable packet; -'
             printIP4_Header(errPktHdr)
             printDataStringInHex(errPktPayload)
           if errPktHdr["prot"] == 0x01:
