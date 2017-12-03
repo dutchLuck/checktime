@@ -4,6 +4,8 @@
 #
 # Check the time on another device or computer on the network.
 #
+# Last Modified on Sun Dec 03 22:00:00 2017
+#
 
 #
 # This code is based on ideas in rawScktPing.py, which in turn
@@ -131,8 +133,8 @@ def compareDataStrings(dataStr1,dataStr2):
 
 # Print the header part of a version 4 IP packet
 def printIP4_Header(header):
-  print 'IP ver .. ', (header["ver"] >> 4)
-  print 'IP hdr len', ((header["ver"] & 0xf) * 4)
+  print 'IP ver .. ', header["ver"]
+  print 'IP hdr len', header["hdr_len"]
   print 'dscp ... 0x%02x ' % header["dscp"]
   print 'totl len %u' % header["totl_len"]
   print 'id ..... 0x%04x ' % header["pkt_id"]
@@ -147,11 +149,25 @@ def printIP4_Header(header):
 
 # Unpack the header of a version 4 IP packet
 def parseIP4_PacketHeader(data, options):
+# Unpack the IPv4 Header
+  ver, dscp, totl_len, pkt_id, frag, ttl, prot, csum, s1, s2, s3, s4, d1, d2, d3, d4 = struct.unpack('!BBHHHBBHBBBBBBBB', data[:20])
+  hdr_len = (ver & 0xf) * 4
+  ver = (ver >> 4) & 0xf
+  ipv4Hdr = { "ver" : ver, "hdr_len" : hdr_len, "dscp" : dscp, "totl_len" : totl_len, "pkt_id" : pkt_id, "frag" : frag,
+	 "ttl" : ttl, "prot" : prot, "csum" : csum,
+	 "s1" : s1, "s2" : s2, "s3" : s3, "s4" : s4,
+	 "d1" : d1, "d2" : d2, "d3" : d3, "d4" : d4 }
+  return ipv4Hdr, data[hdr_len:]
+
+
+# Unpack and Check the header of a version 4 IP packet
+def parseAndCheckIP4_PacketHeader(data, options):
   if sys.platform == 'darwin':  # Undo MacOS cooking some IP4 header fields
     ver, dscp, totalLen, b1, b2, fragLen = struct.unpack('=BBHBBH', data[:8])
     totalLen = totalLen + ((ver & 0xf) * 4)
     tmpData = struct.pack('!BBHBBH', ver, dscp, totalLen, b1, b2, fragLen)
     data = tmpData + data[8:]
+  parsedIPv4_Hdr, parsedIPv4_payload = parseIP4_PacketHeader(data, options)
 # Check to see if the local interface is being used; i.e. src == dest
   srcAddr, destAddr = struct.unpack('!LL', data[12:20])
 # If local interface then don't check the checksum of the packet
@@ -159,23 +175,13 @@ def parseIP4_PacketHeader(data, options):
     chckSum = 0
   else:
     chckSum = calcChecksum(data)
-# Unpack the IPv4 Header
-  ver, dscp, totl_len, pkt_id, frag, ttl, prot, csum, s1, s2, s3, s4, d1, d2, d3, d4 = struct.unpack('!BBHHHBBHBBBBBBBB', data[:20])
-  ipv4Hdr = { "ver" : ver, "dscp" : dscp, "totl_len" : totl_len, "pkt_id" : pkt_id, "frag" : frag,
-	 "ttl" : ttl, "prot" : prot, "csum" : csum,
-	 "s1" : s1, "s2" : s2, "s3" : s3, "s4" : s4,
-	 "d1" : d1, "d2" : d2, "d3" : d3, "d4" : d4 }
   if chckSum != 0:
     print '\n?? The IPv4 packet check sum calculates to 0x%04x not zero' % chckSum
-    if options["verbose"]:
-      print '\nPacket',
-      printDataStringInHex(data)
-      printIP4_Header(ipv4Hdr)
-  elif options["debug"]:
-    print '\nThe IPv4 packet received is; -'
-    printIP4_Header(ipv4Hdr)
+  if options["verbose"]:
+    print '\nThe IPv4 packet received was; -',
+    printIP4_Header(parsedIPv4_Hdr)
     printDataStringInHex(data)
-  return ipv4Hdr, data[20:]
+  return parsedIPv4_Hdr, parsedIPv4_Payload
 
 
 def printICMP_Header(header):
@@ -203,10 +209,10 @@ def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
     if sys.platform == 'linux2': # linux SOCK_DGRAM socket returns do not have IP4 header
       hdr, payload = parseICMP_Data(data)
     else:  # non-linux SOCK_DGRAM socket returns have an IP4 header
-      _, icmpData = parseIP4_PacketHeader(data, optns)
+      _, icmpData = parseAndCheckIP4_PacketHeader(data, optns)
       hdr, payload = parseICMP_Data(icmpData)
   else:  # Process all SOCK_RAW socket returned information
-    _, icmpData = parseIP4_PacketHeader(data, optns)
+    _, icmpData = parseAndCheckIP4_PacketHeader(data, optns)
     hdr, payload = parseICMP_Data(icmpData)
   if hdr["ICMP_Type"] == ICMP_ECHO_REPLY:
     if optns["debug"]:
@@ -352,13 +358,13 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
     while True:
       receivedPacket, peer = s.recvfrom(2048)
       recvTime = getClockTime()
-      ip4_Hdr, ip4_Data = parseIP4_PacketHeader(receivedPacket, optns)
+      ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, optns)
       if ip4_Hdr["prot"] == 0x01:  # Ignore the current packet if it is not ICMP
         icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
         if optns["debug"]:
           print 'Received an ICMP (%d (0x%02x)) packet from %s' % (icmpHdr["ICMP_Type"],icmpHdr["ICMP_Type"],peer[0])
         if icmpHdr["ICMP_Type"] == ICMP_DESTINATION_UNREACHABLE:  # Check for Error Indication
-          errPktHdr, errPktPayload = parseIP4_PacketHeader(icmpPayload, optns)
+          errPktHdr, errPktPayload = parseAndCheckIP4_PacketHeader(icmpPayload, optns)
           if optns["debug"]:
             printIP4_Header(errPktHdr)
             printDataStringInHex(errPktPayload)
