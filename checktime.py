@@ -479,14 +479,15 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
       receivedPacket, peer = s.recvfrom(2048)
       recvTime = getClockTime()
       if peer[0] != addr:  # Ignore the packet if it is not from the target machine
-        informUserIfRequired(0,'Received a packet from another network device',packet)
-      elif len(packet) < 28:  # Ignore packets that are too small
-        informUserIfRequired(0,'Received a packet that is too small',packet)
-      elif isNotAnIPv4_Packet(packet):  # Ignore packets that are not IP v4 packets
-        informUserIfRequired(0,'Received a packet that is not IP version 4',packet)
-      elif isNotAnIPv4_ICMP_Packet(packet):  # Ignore packets that are not ICMP encapsulated in IP v4
-        informUserIfRequired(0,'Received a packet that is not an ICMP datagram',packet)
+        informUserIfRequired(10,'Received a packet from another network device',receivedPacket)
+      elif len(receivedPacket) < 28:  # Ignore packets that are too small
+        informUserIfRequired(10,'Received a packet that is too small',receivedPacket)
+      elif isNotAnIPv4_Packet(receivedPacket):  # Ignore packets that are not IP v4 packets
+        informUserIfRequired(10,'Received a packet that is not IP version 4',receivedPacket)
+      elif isNotAnIPv4_ICMP_Packet(receivedPacket):  # Ignore packets that are not ICMP encapsulated in IP v4
+        informUserIfRequired(10,'Received a packet that is not an ICMP datagram',receivedPacket)
       else:
+        print 'About to test for Destination Unreachable'
         if isThisDestinationUnreachableA_ResponseToThePacketWeSent( icmpPacket, receivedPacket ):
           break 
         ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, options)
