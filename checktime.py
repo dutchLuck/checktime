@@ -184,7 +184,7 @@ def parseAndCheckIP4_PacketHeader(data, options):
     chckSum = calcChecksum(data)
   if chckSum != 0:
     print '\n?? The IPv4 packet check sum calculates to 0x%04x not zero' % chckSum
-  if options["verbose"]:
+  if options["debug"]:
     print '\nThe IPv4 packet received was; -'
     printIP4_Header(parsedIPv4_Hdr)
     printDataStringInHex(data)
@@ -212,6 +212,7 @@ def parseICMP_Data(data):
 
 
 def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
+#  print 'Entering parseICMP_ECHO_REPLY_PacketWithTimeStamp()'
   if optns["dgram"]:  # Process all SOCK_DGRAM socket returned packets
     if sys.platform == 'linux2': # linux SOCK_DGRAM socket returns do not have IP4 header
       hdr, payload = parseICMP_Data(data)
@@ -222,15 +223,18 @@ def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
     _, icmpData = parseAndCheckIP4_PacketHeader(data, optns)
     hdr, payload = parseICMP_Data(icmpData)
   if hdr["ICMP_Type"] == ICMP_ECHO_REPLY:
+    timeStamp = struct.unpack('!d', payload[:_d_size])[0]
+    if optns["verbose"]:
+      print '\nICMP (type %d) packet received is an ICMP Echo Reply' % hdr["ICMP_Type"]
+  else:
+    timeStamp = 0
+    if optns["verbose"]:
+      print '\n?? ICMP (type %d) packet received is not an ICMP Echo Reply' % hdr["ICMP_Type"]
     if optns["debug"]:
       print '\n----------- ICMP Echo Reply is; -'
       printICMP_Header(hdr)
       printDataStringInHex(payload)
-    timeStamp = struct.unpack('!d', payload[:_d_size])[0]
-  else:
-    timeStamp = 0
-    if optns["verbose"]:
-      print '\n?? ICMP (type %d) packet returned is not an ICMP Echo Reply' % hdr["ICMP_Type"]
+#  print 'Leaving parseICMP_ECHO_REPLY_PacketWithTimeStamp()'
   return timeStamp
 
 
@@ -301,7 +305,27 @@ def printTargetNameAndOrIP_Address(name,ipAddress):
     print '(%s)' % str(ipAddress),
 
 
+def informUserIfRequired(level, message, data):
+  if options["debug"]:
+    print message
+    printDataStringInHex(data)
+  elif options["verbose"]:
+    print message
+  elif level > 0:
+    print message
+
+def isNotAnIPv4_Packet( data ):
+  versionHdrLen, _ = struct.unpack('!BB', data[:2])
+  return (versionHdrLen & 0xf0) != 0x40
+
+
+def isNotAnIPv4_ICMP_Packet( data ):
+  protocolByte, _ = struct.unpack('!BH', data[9:12])
+  return protocolByte != 0x1
+
+
 def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
+  exitLoopFlag = False
   if optns["verbose"]:
     print '\nAttempting to get ICMP echo (ping) from',
     printTargetNameAndOrIP_Address(address, addr)
@@ -321,14 +345,20 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
     s.sendto(pingPacket, (addr, 0))
   # Loop until we get an ICMP Echo Reply Packet or time out
     while True:
+    # Note: It appears that Win10 does not send Destination Unreachable ICMP packets
+    #  back to through this socket recvfrom() call. This loop code just times out.
       packet, peer = s.recvfrom(2048)
       recvTime = getClockTime()
       if peer[0] != addr:  # Ignore the packet if it is not from the target machine
-        if optns["verbose"]:
-          print 'Received a packet from %s but not from %s' % (peer[0],addr)
-          if optns["debug"]:
-            printDataStringInHex(packet)
+        informUserIfRequired(10,'Received a packet from another network device',packet)
+      elif len(packet) < 28:  # Ignore packets that are too small
+        informUserIfRequired(10,'Received a packet that is too small',packet)
+      elif isNotAnIPv4_Packet(packet):  # Ignore packets that are not IP v4 packets
+        informUserIfRequired(10,'Received a packet that is not IP version 4',packet)
+      elif isNotAnIPv4_ICMP_Packet(packet):  # Ignore packets that are not ICMP encapsulated in IP v4
+        informUserIfRequired(10,'Received a packet that is not an ICMP datagram',packet)
       else:
+#        print 'Made it to the else just before parseICMP_ECHO_REPLY_PacketWithTimeStamp()'
         ICMP_EchoRequestTimeStamp = parseICMP_ECHO_REPLY_PacketWithTimeStamp(packet, optns)
         if ICMP_EchoRequestTimeStamp != 0:
           s.close()
