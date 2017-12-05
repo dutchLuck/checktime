@@ -377,21 +377,21 @@ def isAnIPv4_ICMP_DestinationUnreachablePacket( data ):
 
 def isThisDestinationUnreachableA_ResponseToThePacketWeSent( transmittedPacket, receivedPacket ):
   print 'Entering isThisDestinationUnreachableA_ResponseToThePacketWeSent()'
-  ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, optns)
+  ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, options)
   if ip4_Hdr["prot"] == 0x01:  # Ignore the current packet if it is not ICMP
     icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
-    if optns["debug"]:
+    if options["debug"]:
       print 'Received an ICMP (%d (0x%02x)) packet from %s' % (icmpHdr["ICMP_Type"],icmpHdr["ICMP_Type"],peer[0])
     if icmpHdr["ICMP_Type"] == ICMP_DESTINATION_UNREACHABLE:  # Check for Unreachable Error Indication
       icmpPayload = uncookIP4_PacketHeaderIfRequired(icmpPayload)
-      errPktHdr, errPktPayload = parseIP4_PacketHeader(icmpPayload, optns)
-      if optns["debug"]:
+      errPktHdr, errPktPayload = parseIP4_PacketHeader(icmpPayload, options)
+      if options["debug"]:
         print 'Received an ICMP Destination Unreachable packet; -'
         printIP4_Header(errPktHdr)
         printDataStringInHex(errPktPayload)
       if errPktHdr["prot"] == 0x01:
         errPktPayloadAsICMP_Hdr, _ = parseICMP_Data(errPktPayload)
-        if optns["debug"]:
+        if options["debug"]:
           printICMP_Header(errPktPayloadAsICMP_Hdr)
         return compareDataStrings(errPktPayload,transmittedPacket)
   return False
