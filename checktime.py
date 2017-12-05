@@ -351,7 +351,7 @@ def isNotAnIPv4_ICMP_EchoReplyPacket( data ):
   return icmpType != ICMP_ECHO_REPLY
 
 
-def isAnIPv4_ICMP_EchoReplyPacket( data ):
+def isAnIPv4_ICMP_OfType( ICMP_TYPE, data ):
   if isNotAnIPv4_ICMP_Packet(data):
     return False
   hdrLength = getHdrLengthOfAnIPv4_Packet(data)
@@ -359,23 +359,23 @@ def isAnIPv4_ICMP_EchoReplyPacket( data ):
     return False
   icmpType, icmpCode = struct.unpack('!BB', data[hdrLength:hdrLength + 2])
   if options["debug"]:
-    print 'isAnIPv4_ICMP_EchoReplyPacket(): icmpType', icmpType, 'icmpCode', icmpCode
-  return icmpType == ICMP_ECHO_REPLY
+    print 'isAnIPv4_ICMP_OfType(', ICMP_TYPE, '): icmpType', icmpType, 'icmpCode', icmpCode
+  return icmpType == ICMP_TYPE
+
+
+def isAnIPv4_ICMP_EchoReplyPacket( data ):
+  return isAnIPv4_ICMP_OfType( ICMP_ECHO_REPLY, data )
+
+
+def isAnIPv4_ICMP_TimestampReplyPacket( data ):
+  return isAnIPv4_ICMP_OfType( ICMP_TIMESTAMP_REPLY, data )
 
 
 def isAnIPv4_ICMP_DestinationUnreachablePacket( data ):
-  if isNotAnIPv4_ICMP_Packet(data):
-    return False
-  hdrLength = getHdrLengthOfAnIPv4_Packet(data)
-  if len(data) < (hdrLength + 8):
-    return False
-  icmpType, icmpCode = struct.unpack('!BB', data[hdrLength:hdrLength + 2])
-  if options["debug"]:
-    print 'isAnIPv4_ICMP_DestinationUnreachablePacket(): icmpType', icmpType, 'icmpCode', icmpCode
-  return icmpType == ICMP_DESTINATION_UNREACHABLE
+  return isAnIPv4_ICMP_OfType( ICMP_DESTINATION_UNREACHABLE, data )
 
 
-def isThisDestinationUnreachableA_ResponseToThePacketWeSent( transmittedPacket, receivedPacket ):
+def isThisDestinationUnreachableA_ResponseToThePacketWeSent( transmittedPacket, receivedPacket, peer ):
   print 'Entering isThisDestinationUnreachableA_ResponseToThePacketWeSent()'
   ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, options)
   if ip4_Hdr["prot"] == 0x01:  # Ignore the current packet if it is not ICMP
@@ -440,7 +440,7 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
       elif isAnIPv4_ICMP_DestinationUnreachablePacket(packet):  # Process any packets that are ICMP Destination Unreachable
       # This is not the packet we have been waiting for but it still shows that the target is alive
         informUserIfRequired(0,'Received a packet that is an ICMP Destination Unreachable',packet) 
-        if isThisDestinationUnreachableA_ResponseToThePacketWeSent( pingPacket, packet ):
+        if isThisDestinationUnreachableA_ResponseToThePacketWeSent( pingPacket, packet, peer ):
           ICMP_EchoRequestTimeStamp = 9.9999
           s.close()
           break  
@@ -486,18 +486,14 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
         informUserIfRequired(10,'Received a packet that is not IP version 4',receivedPacket)
       elif isNotAnIPv4_ICMP_Packet(receivedPacket):  # Ignore packets that are not ICMP encapsulated in IP v4
         informUserIfRequired(10,'Received a packet that is not an ICMP datagram',receivedPacket)
-      else:
-        print 'About to test for Destination Unreachable'
-        if isThisDestinationUnreachableA_ResponseToThePacketWeSent( icmpPacket, receivedPacket ):
-          break 
-        ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, options)
+      elif isAnIPv4_ICMP_TimestampReplyPacket(receivedPacket):  # Process any packets that are ICMP Timestamp Reply
+      # This is very likely the packet we have been waiting for
+        ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, optns)
         icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
-        if icmpHdr["ICMP_Type"] != ICMP_TIMESTAMP_REPLY:  # Ignore other kinds of ICMP
-          if optns["verbose"]:
-            print 'Received an ICMP datagram, but it is not an ICMP Timestamp Reply'
-            printICMP_Header(icmpHdr)
-            printDataStringInHex(icmpPayload)
-        elif icmpHdr["sequence"] != originateSequenceNumber:  # Ignore the icmp data if sequence number does not match
+        if optns["debug"]:
+          printICMP_Header(icmpHdr)
+          printDataStringInHex(icmpPayload)
+        if icmpHdr["sequence"] != originateSequenceNumber:  # Ignore the icmp data if sequence number does not match
           if optns["verbose"]:
             print 'Received an ICMP timestamp reply datagram, but the sequence number 0x%04x does not match' % icmpHdr["sequence"]
         else:
@@ -507,6 +503,14 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
             print '"%s"' % address,
             informUserAboutTimestamp('Transmit', tStamps["transmit"])
             break
+      elif isAnIPv4_ICMP_DestinationUnreachablePacket(receivedPacket):  # Process any packets that are ICMP Destination Unreachable
+      # This is not the packet we have been waiting for but it still shows that the target is alive
+        informUserIfRequired(0,'Received a packet that is an ICMP Destination Unreachable',receivedPacket) 
+        if isThisDestinationUnreachableA_ResponseToThePacketWeSent( icmpPacket, receievedPacket, peer ):
+          s.close()
+          break  
+      else:
+        informUserIfRequired(10,'Received an ICMP packet, but not a Timestamp Reply or Destination Unreachable',receivedPacket)
   except _socket.error, msg:
     if optns["verbose"]:
       print 'Unable to get ICMP timestamp due to:', msg, '\n'
