@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Tue Dec 05 14:46:00 2017
+# Last Modified on Tue Dec 05 22:46:00 2017
 #
 
 #
@@ -172,7 +172,7 @@ def uncookIP4_PacketHeaderIfRequired(inData):
 
 
 # Unpack and Check the header of a version 4 IP packet
-def parseAndCheckIP4_PacketHeader(data, options):
+def parseAndCheckIP4_PacketHeader(data, optns):
   data = uncookIP4_PacketHeaderIfRequired(data)
   parsedIPv4_Hdr, parsedIPv4_Payload = parseIP4_PacketHeader(data, options)
 # Check to see if the local interface is being used; i.e. src == dest
@@ -184,7 +184,7 @@ def parseAndCheckIP4_PacketHeader(data, options):
     chckSum = calcChecksum(data)
   if chckSum != 0:
     print '\n?? The IPv4 packet check sum calculates to 0x%04x not zero' % chckSum
-  if options["debug"]:
+  if optns["debug"]:
     print '\nThe IPv4 packet received was; -'
     printIP4_Header(parsedIPv4_Hdr)
     printDataStringInHex(data)
@@ -478,50 +478,34 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
     while True:
       receivedPacket, peer = s.recvfrom(2048)
       recvTime = getClockTime()
-      ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, optns)
-      if ip4_Hdr["prot"] == 0x01:  # Ignore the current packet if it is not ICMP
-        icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
-        if optns["debug"]:
-          print 'Received an ICMP (%d (0x%02x)) packet from %s' % (icmpHdr["ICMP_Type"],icmpHdr["ICMP_Type"],peer[0])
-        if icmpHdr["ICMP_Type"] == ICMP_DESTINATION_UNREACHABLE:  # Check for Error Indication
-          icmpPayload = uncookIP4_PacketHeaderIfRequired(icmpPayload)
-          errPktHdr, errPktPayload = parseIP4_PacketHeader(icmpPayload, optns)
-          if optns["debug"]:
-            print 'Received an ICMP Destination Unreachable packet; -'
-            printIP4_Header(errPktHdr)
-            printDataStringInHex(errPktPayload)
-          if errPktHdr["prot"] == 0x01:
-            errPktPayloadAsICMP_Hdr, _ = parseICMP_Data(errPktPayload)
-            if optns["debug"]:
-              printICMP_Header(errPktPayloadAsICMP_Hdr)
-            if compareDataStrings(errPktPayload,icmpPacket):
-              break 
-      if peer[0] != addr:  # Ignore the current packet if it is not from the target machine
-        if optns["verbose"]:
-          print 'Received a packet from %s but not from %s' % (peer[0],addr)
-          if optns["debug"]:
-            printDataStringInHex(packet)
+      if peer[0] != addr:  # Ignore the packet if it is not from the target machine
+        informUserIfRequired(0,'Received a packet from another network device',packet)
+      elif len(packet) < 28:  # Ignore packets that are too small
+        informUserIfRequired(0,'Received a packet that is too small',packet)
+      elif isNotAnIPv4_Packet(packet):  # Ignore packets that are not IP v4 packets
+        informUserIfRequired(0,'Received a packet that is not IP version 4',packet)
+      elif isNotAnIPv4_ICMP_Packet(packet):  # Ignore packets that are not ICMP encapsulated in IP v4
+        informUserIfRequired(0,'Received a packet that is not an ICMP datagram',packet)
       else:
-        if ip4_Hdr["prot"] != 0x01:  # Ignore the current packet if it is not ICMP
+        if isThisDestinationUnreachableA_ResponseToThePacketWeSent( icmpPacket, receivedPacket ):
+          break 
+        ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, options)
+        icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
+        if icmpHdr["ICMP_Type"] != ICMP_TIMESTAMP_REPLY:  # Ignore other kinds of ICMP
           if optns["verbose"]:
-            print 'Received a non-ICMP (0x%02x) packet from %s' % (ip4_Hdr["prot"],peer[0])
+            print 'Received an ICMP datagram, but it is not an ICMP Timestamp Reply'
+            printICMP_Header(icmpHdr)
+            printDataStringInHex(icmpPayload)
+        elif icmpHdr["sequence"] != originateSequenceNumber:  # Ignore the icmp data if sequence number does not match
+          if optns["verbose"]:
+            print 'Received an ICMP timestamp reply datagram, but the sequence number 0x%04x does not match' % icmpHdr["sequence"]
         else:
-          icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
-          if icmpHdr["ICMP_Type"] != ICMP_TIMESTAMP_REPLY:  # Ignore other kinds of ICMP
-            if optns["verbose"]:
-              print 'Received an ICMP datagram, but it is not an ICMP Timestamp Reply'
-              printICMP_Header(icmpHdr)
-              printDataStringInHex(icmpPayload)
-          elif icmpHdr["sequence"] != originateSequenceNumber:  # Ignore the icmp data if sequence number does not match
-            if optns["verbose"]:
-              print 'Received an ICMP timestamp reply datagram, but the sequence number 0x%04x does not match' % icmpHdr["sequence"]
-          else:
-            tStamps, tDiff = parseICMP_TIMESTAMP_REPLY_Packet(icmpHdr, icmpPayload, optns)
-            if tDiff != 999999l:
-              s.close()
-              print '"%s"' % address,
-              informUserAboutTimestamp('Transmit', tStamps["transmit"])
-              break
+          tStamps, tDiff = parseICMP_TIMESTAMP_REPLY_Packet(icmpHdr, icmpPayload, optns)
+          if tDiff != 999999l:
+            s.close()
+            print '"%s"' % address,
+            informUserAboutTimestamp('Transmit', tStamps["transmit"])
+            break
   except _socket.error, msg:
     if optns["verbose"]:
       print 'Unable to get ICMP timestamp due to:', msg, '\n'
