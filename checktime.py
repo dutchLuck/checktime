@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Sun Dec 03 22:00:00 2017
+# Last Modified on Tue Dec 05 14:46:00 2017
 #
 
 #
@@ -225,7 +225,7 @@ def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
   if hdr["ICMP_Type"] == ICMP_ECHO_REPLY:
     timeStamp = struct.unpack('!d', payload[:_d_size])[0]
     if optns["verbose"]:
-      print '\nICMP (type %d) packet received is an ICMP Echo Reply' % hdr["ICMP_Type"]
+      print '\nICMP (type %d, code %d) packet received is an ICMP Echo Reply' % (hdr["ICMP_Type"], hdr["code"])
   else:
     timeStamp = 0
     if optns["verbose"]:
@@ -315,13 +315,52 @@ def informUserIfRequired(level, message, data):
     print message
 
 def isNotAnIPv4_Packet( data ):
+  if len(data) < 2:
+    return True
   versionHdrLen, _ = struct.unpack('!BB', data[:2])
   return (versionHdrLen & 0xf0) != 0x40
 
 
+def getHdrLengthOfAnIPv4_Packet( data ):
+  if isNotAnIPv4_Packet(data):
+    return 0
+  elif len(data) < 2:
+    return len(data)
+  versionHdrLen, _ = struct.unpack('!BB', data[:2])
+  return (versionHdrLen & 0xf) * 4
+
+
 def isNotAnIPv4_ICMP_Packet( data ):
+  if isNotAnIPv4_Packet(data):
+    return True
+  elif len(data) < 12:
+    return True
   protocolByte, _ = struct.unpack('!BH', data[9:12])
   return protocolByte != 0x1
+
+
+def isNotAnIPv4_ICMP_EchoReplyPacket( data ):
+  if isNotAnIPv4_ICMP_Packet(data):
+    return True
+  hdrLength = getHdrLengthOfAnIPv4_Packet(data)
+  if len(data) < (hdrLength + 2):
+    return True
+  icmpType, icmpCode = struct.unpack('!BB', data[hdrLength:hdrLength + 2])
+  if options["debug"]:
+    print 'icmpType', icmpType, 'icmpCode', icmpCode
+  return icmpType != ICMP_ECHO_REPLY
+
+
+def isAnIPv4_ICMP_EchoReplyPacket( data ):
+  if isNotAnIPv4_ICMP_Packet(data):
+    return False
+  hdrLength = getHdrLengthOfAnIPv4_Packet(data)
+  if len(data) < (hdrLength + 8):
+    return False
+  icmpType, icmpCode = struct.unpack('!BB', data[hdrLength:hdrLength + 2])
+  if options["debug"]:
+    print 'icmpType', icmpType, 'icmpCode', icmpCode
+  return icmpType == ICMP_ECHO_REPLY
 
 
 def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
@@ -350,19 +389,21 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
       packet, peer = s.recvfrom(2048)
       recvTime = getClockTime()
       if peer[0] != addr:  # Ignore the packet if it is not from the target machine
-        informUserIfRequired(10,'Received a packet from another network device',packet)
+        informUserIfRequired(0,'Received a packet from another network device',packet)
       elif len(packet) < 28:  # Ignore packets that are too small
-        informUserIfRequired(10,'Received a packet that is too small',packet)
+        informUserIfRequired(0,'Received a packet that is too small',packet)
       elif isNotAnIPv4_Packet(packet):  # Ignore packets that are not IP v4 packets
-        informUserIfRequired(10,'Received a packet that is not IP version 4',packet)
+        informUserIfRequired(0,'Received a packet that is not IP version 4',packet)
       elif isNotAnIPv4_ICMP_Packet(packet):  # Ignore packets that are not ICMP encapsulated in IP v4
-        informUserIfRequired(10,'Received a packet that is not an ICMP datagram',packet)
-      else:
-#        print 'Made it to the else just before parseICMP_ECHO_REPLY_PacketWithTimeStamp()'
+        informUserIfRequired(0,'Received a packet that is not an ICMP datagram',packet)
+      elif isAnIPv4_ICMP_EchoReplyPacket(packet):  # Ignore packets that are not ICMP Echo Reply
+        informUserIfRequired(0,'Received a packet that is an ICMP Echo Reply',packet)
         ICMP_EchoRequestTimeStamp = parseICMP_ECHO_REPLY_PacketWithTimeStamp(packet, optns)
         if ICMP_EchoRequestTimeStamp != 0:
           s.close()
           break
+      else:
+        informUserIfRequired(10,'Received a packet that is ICMP, but not an ICMP Echo Reply',packet)
     return recvTime - sentTime
   except _socket.error, msg:
     if optns["verbose"]:
