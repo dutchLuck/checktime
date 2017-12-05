@@ -347,7 +347,7 @@ def isNotAnIPv4_ICMP_EchoReplyPacket( data ):
     return True
   icmpType, icmpCode = struct.unpack('!BB', data[hdrLength:hdrLength + 2])
   if options["debug"]:
-    print 'icmpType', icmpType, 'icmpCode', icmpCode
+    print 'isNotAnIPv4_ICMP_EchoReplyPacket(): icmpType', icmpType, 'icmpCode', icmpCode
   return icmpType != ICMP_ECHO_REPLY
 
 
@@ -359,8 +359,42 @@ def isAnIPv4_ICMP_EchoReplyPacket( data ):
     return False
   icmpType, icmpCode = struct.unpack('!BB', data[hdrLength:hdrLength + 2])
   if options["debug"]:
-    print 'icmpType', icmpType, 'icmpCode', icmpCode
+    print 'isAnIPv4_ICMP_EchoReplyPacket(): icmpType', icmpType, 'icmpCode', icmpCode
   return icmpType == ICMP_ECHO_REPLY
+
+
+def isAnIPv4_ICMP_DestinationUnreachablePacket( data ):
+  if isNotAnIPv4_ICMP_Packet(data):
+    return False
+  hdrLength = getHdrLengthOfAnIPv4_Packet(data)
+  if len(data) < (hdrLength + 8):
+    return False
+  icmpType, icmpCode = struct.unpack('!BB', data[hdrLength:hdrLength + 2])
+  if options["debug"]:
+    print 'isAnIPv4_ICMP_DestinationUnreachablePacket(): icmpType', icmpType, 'icmpCode', icmpCode
+  return icmpType == ICMP_DESTINATION_UNREACHABLE
+
+
+def isThisDestinationUnreachableA_ResponseToThePacketWeSent( transmittedPacket, receivedPacket ):
+  print 'Entering isThisDestinationUnreachableA_ResponseToThePacketWeSent()'
+  ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, optns)
+  if ip4_Hdr["prot"] == 0x01:  # Ignore the current packet if it is not ICMP
+    icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
+    if optns["debug"]:
+      print 'Received an ICMP (%d (0x%02x)) packet from %s' % (icmpHdr["ICMP_Type"],icmpHdr["ICMP_Type"],peer[0])
+    if icmpHdr["ICMP_Type"] == ICMP_DESTINATION_UNREACHABLE:  # Check for Unreachable Error Indication
+      icmpPayload = uncookIP4_PacketHeaderIfRequired(icmpPayload)
+      errPktHdr, errPktPayload = parseIP4_PacketHeader(icmpPayload, optns)
+      if optns["debug"]:
+        print 'Received an ICMP Destination Unreachable packet; -'
+        printIP4_Header(errPktHdr)
+        printDataStringInHex(errPktPayload)
+      if errPktHdr["prot"] == 0x01:
+        errPktPayloadAsICMP_Hdr, _ = parseICMP_Data(errPktPayload)
+        if optns["debug"]:
+          printICMP_Header(errPktPayloadAsICMP_Hdr)
+        return compareDataStrings(errPktPayload,transmittedPacket)
+  return False
 
 
 def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
@@ -396,14 +430,22 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
         informUserIfRequired(0,'Received a packet that is not IP version 4',packet)
       elif isNotAnIPv4_ICMP_Packet(packet):  # Ignore packets that are not ICMP encapsulated in IP v4
         informUserIfRequired(0,'Received a packet that is not an ICMP datagram',packet)
-      elif isAnIPv4_ICMP_EchoReplyPacket(packet):  # Ignore packets that are not ICMP Echo Reply
+      elif isAnIPv4_ICMP_EchoReplyPacket(packet):  # Process any packets that are ICMP Echo Reply
+      # This is very likely the packet we have been waiting for
         informUserIfRequired(0,'Received a packet that is an ICMP Echo Reply',packet)
         ICMP_EchoRequestTimeStamp = parseICMP_ECHO_REPLY_PacketWithTimeStamp(packet, optns)
         if ICMP_EchoRequestTimeStamp != 0:
           s.close()
           break
+      elif isAnIPv4_ICMP_DestinationUnreachablePacket(packet):  # Process any packets that are ICMP Destination Unreachable
+      # This is not the packet we have been waiting for but it still shows that the target is alive
+        informUserIfRequired(0,'Received a packet that is an ICMP Destination Unreachable',packet) 
+        if isThisDestinationUnreachableA_ResponseToThePacketWeSent( pingPacket, packet ):
+          ICMP_EchoRequestTimeStamp = 9.9999
+          s.close()
+          break  
       else:
-        informUserIfRequired(10,'Received a packet that is ICMP, but not an ICMP Echo Reply',packet)
+        informUserIfRequired(10,'Received an ICMP packet, but not an Echo Reply or Destination Unreachable',packet)
     return recvTime - sentTime
   except _socket.error, msg:
     if optns["verbose"]:
