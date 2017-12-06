@@ -224,14 +224,13 @@ def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
     hdr, payload = parseICMP_Data(icmpData)
   if hdr["ICMP_Type"] == ICMP_ECHO_REPLY:
     timeStamp = struct.unpack('!d', payload[:_d_size])[0]
-    if optns["verbose"]:
+    if optns["debug"]:
       print '\nICMP (type %d, code %d) packet received is an ICMP Echo Reply' % (hdr["ICMP_Type"], hdr["code"])
   else:
     timeStamp = 0
-    if optns["verbose"]:
-      print '\n?? ICMP (type %d) packet received is not an ICMP Echo Reply' % hdr["ICMP_Type"]
     if optns["debug"]:
-      print '\n----------- ICMP Echo Reply is; -'
+      print '----------- Reply to ICMP Echo Request was; -'
+      print '?? ICMP (type %d) packet received is not an ICMP Echo Reply' % hdr["ICMP_Type"]
       printICMP_Header(hdr)
       printDataStringInHex(payload)
 #  print 'Leaving parseICMP_ECHO_REPLY_PacketWithTimeStamp()'
@@ -310,7 +309,8 @@ def informUserIfRequired(level, message, data):
     print message
     printDataStringInHex(data)
   elif options["verbose"]:
-    print message
+    if level > 1:
+      print message
   elif level > 0:
     print message
 
@@ -402,8 +402,8 @@ def isThisDestinationUnreachableA_ResponseToThePacketWeSent( transmittedPacket, 
 
 def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
   exitLoopFlag = False
-  if optns["verbose"]:
-    print '\nAttempting to get ICMP echo (ping) from',
+  if optns["debug"]:
+    print '\n--- Attempting to get ICMP echo (ping) from',
     printTargetNameAndOrIP_Address(address, addr)
     print
   try:
@@ -448,7 +448,7 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
           s.close()
           break  
       else:
-        informUserIfRequired(10,'Received an ICMP packet, but not an Echo Reply or Destination Unreachable',packet)
+        informUserIfRequired(0,'Received an ICMP packet, but not an Echo Reply or Destination Unreachable',packet)
     return recvTime - sentTime
   except _socket.error, msg:
     if optns["verbose"]:
@@ -460,8 +460,8 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
 
 def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
   tDiff = 999999l
-  if optns["verbose"]:
-    print '\nAttempting to get ICMP timestamp from',
+  if optns["debug"]:
+    print '\n--- Attempting to get ICMP timestamp from',
     printTargetNameAndOrIP_Address(address, addr)
     print
   try:
@@ -482,13 +482,13 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
       receivedPacket, peer = s.recvfrom(2048)
       recvTime = getClockTime()
       if peer[0] != addr:  # Ignore the packet if it is not from the target machine
-        informUserIfRequired(10,'Received a packet from another network device',receivedPacket)
+        informUserIfRequired(0,'Received a packet from another network device',receivedPacket)
       elif len(receivedPacket) < 28:  # Ignore packets that are too small
-        informUserIfRequired(10,'Received a packet that is too small',receivedPacket)
+        informUserIfRequired(0,'Received a packet that is too small',receivedPacket)
       elif isNotAnIPv4_Packet(receivedPacket):  # Ignore packets that are not IP v4 packets
-        informUserIfRequired(10,'Received a packet that is not IP version 4',receivedPacket)
+        informUserIfRequired(0,'Received a packet that is not IP version 4',receivedPacket)
       elif isNotAnIPv4_ICMP_Packet(receivedPacket):  # Ignore packets that are not ICMP encapsulated in IP v4
-        informUserIfRequired(10,'Received a packet that is not an ICMP datagram',receivedPacket)
+        informUserIfRequired(0,'Received a packet that is not an ICMP datagram',receivedPacket)
       elif isAnIPv4_ICMP_TimestampReplyPacket(receivedPacket):  # Process any packets that are ICMP Timestamp Reply
       # This is very likely the packet we have been waiting for
         ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, optns)
@@ -513,7 +513,7 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
           s.close()
           break  
       else:
-        informUserIfRequired(10,'Received an ICMP packet, but not a Timestamp Reply or Destination Unreachable',receivedPacket)
+        informUserIfRequired(0,'Received an ICMP packet, but not a Timestamp Reply or Destination Unreachable',receivedPacket)
   except _socket.error, msg:
     if optns["verbose"]:
       print 'Unable to get ICMP timestamp due to:', msg, '\n'
@@ -598,10 +598,9 @@ def printPingTime( trgtAddr, startTime ):
 def main():
   startTime = getClockTime()
   args = processCommandLine()
-  if options["verbose"]:
-    print '\nCheck the time on one or more networked devices'
   if options["debug"]:
-    print '\n"checktime.py" Python script running on system type "%s"' % sys.platform
+    print '\nCheck the time on one or more networked devices'
+    print '"checktime.py" Python script running on system type "%s"' % sys.platform
   if len(args) < 1:
     print '\n?? Please specify the computer to ping?\n'
     usage()
