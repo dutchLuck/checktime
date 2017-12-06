@@ -376,25 +376,28 @@ def isAnIPv4_ICMP_DestinationUnreachablePacket( data ):
 
 
 def isThisDestinationUnreachableA_ResponseToThePacketWeSent( transmittedPacket, receivedPacket, peer ):
-  print 'Entering isThisDestinationUnreachableA_ResponseToThePacketWeSent()'
-  ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, options)
-  if ip4_Hdr["prot"] == 0x01:  # Ignore the current packet if it is not ICMP
+  result = False
+  if options["debug"]:
+    print 'Entering isThisDestinationUnreachableA_ResponseToThePacketWeSent()'
+  ip4_Hdr, ip4_Data = parseIP4_PacketHeader(receivedPacket, options)
+  if ip4_Hdr["prot"] == 0x01:  # Should be redundant, but ignore the received packet if it is not ICMP
     icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
     if options["debug"]:
       print 'Received an ICMP (%d (0x%02x)) packet from %s' % (icmpHdr["ICMP_Type"],icmpHdr["ICMP_Type"],peer[0])
-    if icmpHdr["ICMP_Type"] == ICMP_DESTINATION_UNREACHABLE:  # Check for Unreachable Error Indication
-      icmpPayload = uncookIP4_PacketHeaderIfRequired(icmpPayload)
+    if icmpHdr["ICMP_Type"] == ICMP_DESTINATION_UNREACHABLE:  # Should be redundant, but check for Unreachable Error Indication
+      icmpPayload = uncookIP4_PacketHeaderIfRequired(icmpPayload)  # Unwind possible MacOS X changes to header info
       errPktHdr, errPktPayload = parseIP4_PacketHeader(icmpPayload, options)
       if options["debug"]:
-        print 'Received an ICMP Destination Unreachable packet; -'
+        print 'Received the following ICMP Destination Unreachable packet; -'
         printIP4_Header(errPktHdr)
         printDataStringInHex(errPktPayload)
-      if errPktHdr["prot"] == 0x01:
+      if errPktHdr["prot"] == 0x01:  # Was the sent packet that resulted in this reply an ICMP packet
         errPktPayloadAsICMP_Hdr, _ = parseICMP_Data(errPktPayload)
         if options["debug"]:
+          print 'The ICMP header that caused the Destination Unreachable reply is; -'
           printICMP_Header(errPktPayloadAsICMP_Hdr)
-        return compareDataStrings(errPktPayload,transmittedPacket)
-  return False
+        result = compareDataStrings(errPktPayload,transmittedPacket)  # Compare sent packet ICMP header with reply
+  return result
 
 
 def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
