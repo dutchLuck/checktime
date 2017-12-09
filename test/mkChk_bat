@@ -1,0 +1,5 @@
+#! /bin/sh
+#
+#
+#
+awk -f mkChk_bat.awk chk > chk.bat 

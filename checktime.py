@@ -48,6 +48,7 @@ def getClockTime():
   return systemWallClockTime
 
 
+# Calculate the number of milliseconds since midnight UTC
 def calcTimeSinceUTC_Midnight():
   utcnow = datetime.utcnow()
   midnightUTC = datetime.combine(utcnow.date(), time(0))
@@ -56,6 +57,7 @@ def calcTimeSinceUTC_Midnight():
   return millisecondsSinceMidnight
 
 
+# Convert milliseconds to hours, minutes and seconds format
 def convertMillisecondsSinceMidnight( milliseconds ):
   msecs = milliseconds % 1000L
   hrs = milliseconds / 3600000L
@@ -120,13 +122,13 @@ def compareDataStrings(dataStr1,dataStr2):
   result = True
   length = len(dataStr1)
   len2 = len(dataStr2)
-  if length > len2:
+  if length > len2:  # choose shortest string
     length = len2
-  length -= 1
+  length -= 1  # use length variable as an index
   while length >= 0:
     if dataStr1[length] != dataStr2[length]:
       result = False
-      length = -1
+      length = -1  # force exit of while loop
     length -= 1
   return result
 
@@ -185,7 +187,7 @@ def parseAndCheckIP4_PacketHeader(data, optns):
   if chckSum != 0:
     print '\n?? The IPv4 packet check sum calculates to 0x%04x not zero' % chckSum
   if optns["debug"]:
-    print '\nThe IPv4 packet received was; -'
+    print 'The IPv4 packet received was; -'
     printIP4_Header(parsedIPv4_Hdr)
     printDataStringInHex(data)
   return parsedIPv4_Hdr, parsedIPv4_Payload
@@ -206,8 +208,10 @@ def parseICMP_Data(data):
   ICMP_Header = {"ICMP_Type":type,"code":code,"checksum":checksum,"id":id,"sequence":sequence}
   if chckSum != 0:
     print '\n?? The ICMP check sum test failed (it calculates to 0x%04x, not 0)' % chckSum
-    if options["debug"]:
-      printICMP_Header(ICMP_Header)
+  if options["debug"]:
+    print 'The ICMP datagram is; -'
+    printICMP_Header(ICMP_Header)
+    printDataStringInHex(data)
   return ICMP_Header, data[8:]
 
 
