@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Tue Dec 05 22:46:00 2017
+# Last Modified on Tue Dec 10 13:29:00 2017
 #
 
 #
@@ -117,6 +117,11 @@ def printDataStringInHex(dataString):
   print
 
 
+def labelAndPrintDataStringInHex(label,dataString):
+  print label,
+  printDataStringInHex(dataString)
+
+
 # Compare two strings of data up to the length of the shorter data string
 def compareDataStrings(dataStr1,dataStr2):
   result = True
@@ -187,9 +192,9 @@ def parseAndCheckIP4_PacketHeader(data, optns):
   if chckSum != 0:
     print '\n?? The IPv4 packet check sum calculates to 0x%04x not zero' % chckSum
   if optns["debug"]:
-    print 'The IPv4 packet received was; -'
+    print 'The header of the IPv4 packet received was; -'
     printIP4_Header(parsedIPv4_Hdr)
-    printDataStringInHex(data)
+    labelAndPrintDataStringInHex('The IPv4 packet received in hex format; -',data)
   return parsedIPv4_Hdr, parsedIPv4_Payload
 
 
@@ -209,9 +214,9 @@ def parseICMP_Data(data):
   if chckSum != 0:
     print '\n?? The ICMP check sum test failed (it calculates to 0x%04x, not 0)' % chckSum
   if options["debug"]:
-    print 'The ICMP datagram is; -'
+    print 'The header of the ICMP datagram is; -'
     printICMP_Header(ICMP_Header)
-    printDataStringInHex(data)
+    labelAndPrintDataStringInHex('The ICMP datagram in hex format is; -',data)
   return ICMP_Header, data[8:]
 
 
@@ -236,7 +241,7 @@ def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
       print '----------- Reply to ICMP Echo Request was; -'
       print '?? ICMP (type %d) packet received is not an ICMP Echo Reply' % hdr["ICMP_Type"]
       printICMP_Header(hdr)
-      printDataStringInHex(payload)
+      labelAndPrintDataStringInHex('The data in the unexpected ICMP datagram is; -',payload)
 #  print 'Leaving parseICMP_ECHO_REPLY_PacketWithTimeStamp()'
   return timeStamp
 
@@ -268,11 +273,11 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
   if optns["debug"]:
     print '\n----------- ICMP Time Stamp Reply is; -'
     printICMP_Header(hdr)
-    printDataStringInHex(payload)
+    labelAndPrintDataStringInHex('The data in the ICMP datagram is; -',payload)
   if len(payload) < 12:  # Check length of data which should contain 3 timestamps
     print "?? Expected at least 3 * 4 byte reply, but got", len(payload)
     if optns["verbose"]:
-      printDataStringInHex(payoad)
+      labelAndPrintDataStringInHex('The truncated ICMP data in hex is; -',payoad)
   else:
     ot, rt, tt = struct.unpack('!lll', payload[:12])  # unpack in standard network order
     tmStmps = { "originate" : ot, "received" : rt, "transmit" : tt }
@@ -310,8 +315,7 @@ def printTargetNameAndOrIP_Address(name,ipAddress):
 
 def informUserIfRequired(level, message, data):
   if options["debug"]:
-    print message
-    printDataStringInHex(data)
+    labelAndPrintDataStringInHex(message,data)
   elif options["verbose"]:
     if level > 1:
       print message
@@ -499,7 +503,7 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
         icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
         if optns["debug"]:
           printICMP_Header(icmpHdr)
-          printDataStringInHex(icmpPayload)
+          labelAndPrintDataStringInHex('ICMP Timestamp reply data',icmpPayload)
         if icmpHdr["sequence"] != originateSequenceNumber:  # Ignore the icmp data if sequence number does not match
           if optns["verbose"]:
             print 'Received an ICMP timestamp reply datagram, but the sequence number 0x%04x does not match' % icmpHdr["sequence"]
