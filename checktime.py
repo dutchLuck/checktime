@@ -36,7 +36,7 @@ ICMP_INFORMATION_REQUEST = 15
 ICMP_INFORMATION_REPLY = 16
 
 _d_size = struct.calcsize('d')
-options = {"dgram" : False, "debug" : False, "help" : False, "reverse" : False, "verbose" : False}
+options = {"dgram" : False, "rawSck" : False, "debug" : False, "help" : False, "reverse" : False, "verbose" : False}
 
 
 # Get the most accurate time available on the local system
@@ -265,7 +265,7 @@ def informUserAboutTimestamps( timestamps ):
 def informUserAboutTimestampProblem( msg, timeStamps ):
   print "\n?? ", msg
   informUserAboutTimestamps( timeStamps )
-  print '!! Hint: If target computer is running MS Windows try the -r (--reverse) option'
+  print '!! Hint: If target computer is running MS Windows try the -m (--microsoft) option'
 
 
 def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
@@ -301,6 +301,8 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
 def socket():
   if options["dgram"]:
     return _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM, _socket.IPPROTO_ICMP)
+  elif options["rawSck"]:
+    return _socket.socket(_socket.AF_INET, _socket.SOCK_RAW, _socket.IPPROTO_ICMP)
   elif sys.platform != 'darwin':
     return _socket.socket(_socket.AF_INET, _socket.SOCK_RAW, _socket.IPPROTO_ICMP)
   else:
@@ -547,7 +549,8 @@ def usage():
   print ' where; -\n   -d or --dgram    selects SOCK_DGRAM socket instead of SOCK_RAW socket'
   print '   -D or --debug    prints out Debug information'
   print '   -h or --help     outputs this usage message'
-  print '   -r or --reverse  reverses byte order of receive and transmit timestamps (suits MS Windows)'
+  print '   -m or --microsoft  reverses byte order of receive and transmit timestamps (suits MS Windows)'
+  print '   -r or --raw      selects SOCK_RAW but is over-ridden by -d or --dgram'
   print '   -v or --verbose  prints verbose output'
   print '   targetMachine is either the name or IP address of the computer to ping'
 
@@ -567,8 +570,10 @@ def processCommandLine():
       options["debug"] = True
     elif o in ("-h", "--help"):
       options["help"] = True
-    elif o in ("-r", "--reverse"):
+    elif o in ("-m", "--microsoft"):
       options["reverse"] = True
+    elif o in ("-r", "--raw"):
+      options["rawSck"] = True
     elif o in ("-v", "--verbose"):
       options["verbose"] = True
   if options["debug"]:
