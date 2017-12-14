@@ -558,7 +558,7 @@ def usage():
 # Get options and arguments from the command line
 def processCommandLine():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], "dDhrv", ["dgram","debug","help","reverse","verbose"])
+    opts, args = getopt.getopt(sys.argv[1:], "dDhmrv", ["dgram","debug","help","microsoft","reverse","verbose"])
   except getopt.GetoptError as err:
     print str(err)
     usage()
