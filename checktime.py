@@ -208,29 +208,34 @@ def printICMP_Header(header):
   
 
 def parseICMP_Data(data):
-  chckSum = calcChecksum(data)
   type, code, checksum, id, sequence = struct.unpack('!BBHHH', data[:8])
   ICMP_Header = {"ICMP_Type":type,"code":code,"checksum":checksum,"id":id,"sequence":sequence}
+  return ICMP_Header, data[8:]
+
+
+def parseAndCheckICMP_Data(data):
+  ICMP_Header, ICMP_Payload = parseICMP_Data(data)
+  chckSum = calcChecksum(data)
   if chckSum != 0:
     print '\n?? The ICMP check sum test failed (it calculates to 0x%04x, not 0)' % chckSum
   if options["debug"]:
     print 'The header of the ICMP datagram is; -'
     printICMP_Header(ICMP_Header)
     labelAndPrintDataStringInHex('The ICMP datagram in hex format is; -',data)
-  return ICMP_Header, data[8:]
+  return ICMP_Header, ICMP_Payload
 
 
 def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
 #  print 'Entering parseICMP_ECHO_REPLY_PacketWithTimeStamp()'
   if optns["dgram"]:  # Process all SOCK_DGRAM socket returned packets
     if sys.platform == 'linux2': # linux SOCK_DGRAM socket returns do not have IP4 header
-      hdr, payload = parseICMP_Data(data)
+      hdr, payload = parseAndCheckICMP_Data(data)
     else:  # non-linux SOCK_DGRAM socket returns have an IP4 header
       _, icmpData = parseAndCheckIP4_PacketHeader(data, optns)
-      hdr, payload = parseICMP_Data(icmpData)
+      hdr, payload = parseAndCheckICMP_Data(icmpData)
   else:  # Process all SOCK_RAW socket returned information
     _, icmpData = parseAndCheckIP4_PacketHeader(data, optns)
-    hdr, payload = parseICMP_Data(icmpData)
+    hdr, payload = parseAndCheckICMP_Data(icmpData)
   if hdr["ICMP_Type"] == ICMP_ECHO_REPLY:
     timeStamp = struct.unpack('!d', payload[:_d_size])[0]
     if optns["debug"]:
@@ -391,7 +396,7 @@ def isThisDestinationUnreachableA_ResponseToThePacketWeSent( transmittedPacket, 
     print 'Entering isThisDestinationUnreachableA_ResponseToThePacketWeSent()'
   ip4_Hdr, ip4_Data = parseIP4_PacketHeader(receivedPacket, options)
   if ip4_Hdr["prot"] == 0x01:  # Should be redundant, but ignore the received packet if it is not ICMP
-    icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
+    icmpHdr, icmpPayload = parseAndCheckICMP_Data(ip4_Data)
     if options["debug"]:
       print 'Received an ICMP (%d (0x%02x)) packet from %s' % (icmpHdr["ICMP_Type"],icmpHdr["ICMP_Type"],peer[0])
     if icmpHdr["ICMP_Type"] == ICMP_DESTINATION_UNREACHABLE:  # Should be redundant, but check for Unreachable Error Indication
@@ -402,7 +407,7 @@ def isThisDestinationUnreachableA_ResponseToThePacketWeSent( transmittedPacket, 
         printIP4_Header(errPktHdr)
         printDataStringInHex(errPktPayload)
       if errPktHdr["prot"] == 0x01:  # Was the sent packet that resulted in this reply an ICMP packet
-        errPktPayloadAsICMP_Hdr, _ = parseICMP_Data(errPktPayload)
+        errPktPayloadAsICMP_Hdr, _ = parseAndCheckICMP_Data(errPktPayload)
         if options["debug"]:
           print 'The ICMP header that caused the Destination Unreachable reply is; -'
           printICMP_Header(errPktPayloadAsICMP_Hdr)
@@ -423,7 +428,7 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
     pingPacket = constructICMP_ECHO_REQUEST_Packet(1)
     if optns["debug"]:
       print '\n----------- ICMP Echo Request is; -'
-      ICMP_Hdr, ICMP_Payload = parseICMP_Data(pingPacket)
+      ICMP_Hdr, ICMP_Payload = parseAndCheckICMP_Data(pingPacket)
       printICMP_Header(ICMP_Hdr)
       printDataStringInHex(ICMP_Payload)
   # Send the ICMP Echo Request
@@ -482,7 +487,7 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
     icmpPacket = constructICMP_TIMESTAMP_REQUEST_Packet(originateSequenceNumber)
     if optns["debug"]:
       print '\n----------- ICMP Timestamp Request is; -'
-      ICMP_Hdr, ICMP_Payload = parseICMP_Data(icmpPacket)
+      ICMP_Hdr, ICMP_Payload = parseAndCheckICMP_Data(icmpPacket)
       printICMP_Header(ICMP_Hdr)
       printDataStringInHex(ICMP_Payload)
     sentTime = getClockTime()
@@ -502,7 +507,7 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
       elif isAnIPv4_ICMP_TimestampReplyPacket(receivedPacket):  # Process any packets that are ICMP Timestamp Reply
       # This is very likely the packet we have been waiting for
         ip4_Hdr, ip4_Data = parseAndCheckIP4_PacketHeader(receivedPacket, optns)
-        icmpHdr, icmpPayload = parseICMP_Data(ip4_Data)
+        icmpHdr, icmpPayload = parseAndCheckICMP_Data(ip4_Data)
         if optns["debug"]:
           printICMP_Header(icmpHdr)
           labelAndPrintDataStringInHex('ICMP Timestamp reply data',icmpPayload)
