@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Tue Dec 10 13:29:00 2017
+# Last Modified on Tue Dec 22 20:29:00 2017
 #
 
 #
@@ -218,6 +218,8 @@ def parseAndCheckICMP_Data(data):
   chckSum = calcChecksum(data)
   if chckSum != 0:
     print '\n?? The ICMP check sum test failed (it calculates to 0x%04x, not 0)' % chckSum
+    chckSum = calcChecksum(data[:8])
+    print '?? The ICMP Header check sum calculates to 0x%04x' % chckSum
   if options["debug"]:
     print 'The header of the ICMP datagram is; -'
     printICMP_Header(ICMP_Header)
@@ -459,9 +461,12 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
       # This is not the packet we have been waiting for but it still shows that the target is alive
         informUserIfRequired(0,'Received a packet that is an ICMP Destination Unreachable',packet) 
         if isThisDestinationUnreachableA_ResponseToThePacketWeSent( pingPacket, packet, peer ):
+          informUserIfRequired(0,'The ICMP Destination Unreachable was in response to our Echo Request',packet) 
           ICMP_EchoRequestTimeStamp = 9.9999
           s.close()
           break  
+        else:
+          informUserIfRequired(0,'The ICMP Destination Unreachable was not in response to our Echo Request',packet)   
       else:
         informUserIfRequired(0,'Received an ICMP packet, but not an Echo Reply or Destination Unreachable',packet)
     return recvTime - sentTime
@@ -484,14 +489,14 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
     s.settimeout(2)
   # Build an ICMP Timestamp Request Packet
     originateSequenceNumber = 1
-    icmpPacket = constructICMP_TIMESTAMP_REQUEST_Packet(originateSequenceNumber)
+    icmpTsReqPckt = constructICMP_TIMESTAMP_REQUEST_Packet(originateSequenceNumber)
+    ICMP_TsReqHdr, ICMP_TsReqPayload = parseAndCheckICMP_Data(icmpTsReqPckt)
     if optns["debug"]:
       print '\n----------- ICMP Timestamp Request is; -'
-      ICMP_Hdr, ICMP_Payload = parseAndCheckICMP_Data(icmpPacket)
-      printICMP_Header(ICMP_Hdr)
-      printDataStringInHex(ICMP_Payload)
+      printICMP_Header(ICMP_TsReqHdr)
+      printDataStringInHex(ICMP_TsReqPayload)
     sentTime = getClockTime()
-    s.sendto(icmpPacket, (addr, 0))
+    s.sendto(icmpTsReqPckt, (addr, 0))
   # Loop until we get an ICMP datagram from the target computer
     while True:
       receivedPacket, peer = s.recvfrom(2048)
@@ -524,9 +529,12 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
       elif isAnIPv4_ICMP_DestinationUnreachablePacket(receivedPacket):  # Process any packets that are ICMP Destination Unreachable
       # This is not the packet we have been waiting for but it still shows that the target is alive
         informUserIfRequired(0,'Received a packet that is an ICMP Destination Unreachable',receivedPacket) 
-        if isThisDestinationUnreachableA_ResponseToThePacketWeSent( icmpPacket, receievedPacket, peer ):
+        if isThisDestinationUnreachableA_ResponseToThePacketWeSent( icmpTsReqPckt, receivedPacket, peer ):
+          informUserIfRequired(0,'The ICMP Destination Unreachable was in response to our Timestamp Request',receivedPacket) 
           s.close()
-          break  
+          break
+        else:
+          informUserIfRequired(0,'The ICMP Destination Unreachable was not in response to our Timestamp Request',receivedPacket)   
       else:
         informUserIfRequired(0,'Received an ICMP packet, but not a Timestamp Reply or Destination Unreachable',receivedPacket)
   except _socket.error, msg:
