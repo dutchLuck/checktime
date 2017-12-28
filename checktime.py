@@ -286,15 +286,21 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
     if optns["verbose"]:
       labelAndPrintDataStringInHex('The truncated ICMP data in hex is; -',payoad)
   else:
-    ot, rt, tt = struct.unpack('!lll', payload[:12])  # unpack in standard network order
-    tmStmps = { "originate" : ot, "received" : rt, "transmit" : tt }
+    ot, rt, tt = struct.unpack('!lll', payload[:12])  # unpack in signed standard network order
+    tmStmps = { "originate" : ot, "received" : rt, "transmit" : tt }  # set (at least) originate - others maybe overwritten
     if optns["reverse"]:  # MS Windows uses little endian byte order in sent timestamps
-      rot, rrt, rtt = struct.unpack('<lll', payload[:12])  # unpack in little endian order
+      rot, rrt, rtt = struct.unpack('<lll', payload[:12])  # unpack in signed little endian order
       tmStmps["received"] = rrt
       tmStmps["transmit"] = rtt
-    if tmStmps["transmit"] < 0:
+    if tmStmps["transmit"] < 0:  # A minus value indicates a non-standard timestamp is flagged
       informUserAboutTimestampProblem('Non-standard transmit timestamp returned', tmStmps)
-    elif tmStmps["transmit"] > 86400000l:
+      if optns["reverse"]:  # MS Windows uses little endian byte order in sent timestamps
+        nsot, nsrt, nstt = struct.unpack('<LLL', payload[:12])  # unpack in unsigned little endian order
+      else:
+      	nsot, nsrt, nstt = struct.unpack('!LLL', payload[:12])  # unpack in unsigned standard network order
+      tmStamps["received"] = 0x7fffffff & nsrt  # try crude fix of removing sign bit
+      tmStamps["transmit"] = 0x7fffffff & nstt  # try crude fix of removing sign bit
+    if tmStmps["transmit"] > 86400000l:
       informUserAboutTimestampProblem('timestamp returned is greater than the maximum mS in day', tmStmps)
     else:
       timeDiff = tmStmps["transmit"] - tmStmps["originate"]
