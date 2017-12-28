@@ -276,7 +276,8 @@ def informUserAboutTimestampProblem( msg, timeStamps ):
 
 
 def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
-  timeDiff = 999999l
+  parsedOk = False
+  tmStmps = { "originate" : 0l, "received" : 0l, "transmit" : 0l }  # preset timestamps to 0
   if optns["debug"]:
     print '\n----------- ICMP Time Stamp Reply is; -'
     printICMP_Header(hdr)
@@ -291,7 +292,9 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
     if optns["reverse"]:  # MS Windows uses little endian byte order in sent timestamps
       rot, rt, tt = struct.unpack('<lll', payload[:12])  # unpack in signed little endian order
       ruot, urt, utt = struct.unpack('<LLL', payload[:12])  # unpack in unsigned little endian order
-    tmStmps = { "originate" : ot, "received" : rt, "transmit" : tt }  # set (at least) originate - others maybe overwritten
+    tmStmps["originate"] = ot  # set signed originate value, which is assumed to be in proper format
+    tmStmps["received"] = rt  # set signed received stamp value - may yet be overwritten
+    tmStmps["transmit"] = tt  # set signed transmit stamp value - may yet be overwritten
     utmStmps = { "originate" : uot, "received" : urt, "transmit" : utt }  # set (at least) originate - others maybe overwritten
     if tmStmps["transmit"] < 0:  # A minus value indicates a non-standard timestamp is flagged
       informUserAboutTimestampProblem('Non-standard transmit timestamp returned', utmStmps)
@@ -300,10 +303,10 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
     if tmStmps["transmit"] > 86400000:
       informUserAboutTimestampProblem('timestamp returned is greater than the maximum mS in day', tmStmps)
     else:
-      timeDiff = tmStmps["transmit"] - tmStmps["originate"]
+      parsedOk = True
       if optns["debug"]:
         informUserAboutTimestamps( tmStmps )
-  return tmStmps, timeDiff
+  return parsedOk, tmStmps
 
 
 # Use a Raw Socket (SOCK_RAW) by default, but use SOCK_DGRAM if on Apple Mac OSX
@@ -523,8 +526,9 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
           if optns["verbose"]:
             print 'Received an ICMP timestamp reply datagram, but the sequence number 0x%04x does not match' % icmpHdr["sequence"]
         else:
-          tStamps, tDiff = parseICMP_TIMESTAMP_REPLY_Packet(icmpHdr, icmpPayload, optns)
-          if tDiff != 999999l:
+          success, tStamps = parseICMP_TIMESTAMP_REPLY_Packet(icmpHdr, icmpPayload, optns)
+          if success:
+            tDiff = tStamps["transmit"] - tStamps["originate"]
             s.close()
             print '"%s"' % address,
             informUserAboutTimestamp('Transmit', tStamps["transmit"])
