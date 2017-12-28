@@ -293,14 +293,16 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
       tmStmps["received"] = rrt
       tmStmps["transmit"] = rtt
     if tmStmps["transmit"] < 0:  # A minus value indicates a non-standard timestamp is flagged
-      informUserAboutTimestampProblem('Non-standard transmit timestamp returned', tmStmps)
       if optns["reverse"]:  # MS Windows uses little endian byte order in sent timestamps
         nsot, nsrt, nstt = struct.unpack('<LLL', payload[:12])  # unpack in unsigned little endian order
       else:
       	nsot, nsrt, nstt = struct.unpack('!LLL', payload[:12])  # unpack in unsigned standard network order
-      tmStamps["received"] = 0x7fffffff & nsrt  # try crude fix of removing sign bit
-      tmStamps["transmit"] = 0x7fffffff & nstt  # try crude fix of removing sign bit
-    if tmStmps["transmit"] > 86400000l:
+      tmStamps["received"] = nsrt  # use unsigned value in informUser....()
+      tmStamps["transmit"] = nstt  # use unsigned value in informUser....()
+      informUserAboutTimestampProblem('Non-standard transmit timestamp returned', tmStmps)
+      tmStamps["received"] = 0x7fffffffL & nsrt  # try crude fix of removing sign bit
+      tmStamps["transmit"] = 0x7fffffffL & nstt  # try crude fix of removing sign bit
+    if tmStmps["transmit"] > 86400000:
       informUserAboutTimestampProblem('timestamp returned is greater than the maximum mS in day', tmStmps)
     else:
       timeDiff = tmStmps["transmit"] - tmStmps["originate"]
