@@ -3,7 +3,7 @@ REM #! /bin/sh
 REM # 
 REM # C H K 
 REM # 
-REM # Last modified on Sun Dec  3 17:26:21 2017  
+REM # Last modified on Wed Dec 28 21:14:19 2017  
 REM # 
 REM # 
 REM # 
@@ -11,9 +11,9 @@ REM # Linux and other similar systems need sudo,
 REM #  however Mac OSX does not need sudo 
 REM # 
 ECHO  ----------- Successful 
-REM ## 
-REM ## Local ADSL Router 
-python ..\checktime.py %1 10.0.0.138  
+REM #### 
+REM #### Local ADSL Router 
+REM # $PROG_UNDER_TEST $1 10.0.0.138 
 REM #### 
 REM #### Local Windows XP SP3 computer, after ensuring echo+timestamp is on with; - 
 REM ####  netsh firewall set icmpsetting 13 enable 
@@ -50,6 +50,12 @@ python ..\checktime.py %1 www.freebsd.com www.netbsd.org
 REM ## 
 REM ## Seems like a python program should naturally team up with www.python.org 
 python ..\checktime.py %1 www.python.org  
+REM # 
+REM # 
+ECHO  ---------- Mostly 
+REM ## 
+REM ## Ping and timestamp succeed, but timestamp has non-standard flag set 
+python ..\checktime.py %1 58.96.102.9  
 REM # 
 REM # 
 ECHO  ---------- Unsuccessful 
