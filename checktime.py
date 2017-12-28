@@ -287,22 +287,15 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
       labelAndPrintDataStringInHex('The truncated ICMP data in hex is; -',payoad)
   else:
     ot, rt, tt = struct.unpack('!lll', payload[:12])  # unpack in signed standard network order
-    tmStmps = { "originate" : ot, "received" : rt, "transmit" : tt }  # set (at least) originate - others maybe overwritten
+    uot, urt, utt = struct.unpack('!LLL', payload[:12])  # unpack in unsigned standard network order
     if optns["reverse"]:  # MS Windows uses little endian byte order in sent timestamps
-      rot, rrt, rtt = struct.unpack('<lll', payload[:12])  # unpack in signed little endian order
-      tmStmps["received"] = rrt
-      tmStmps["transmit"] = rtt
+      rot, rt, tt = struct.unpack('<lll', payload[:12])  # unpack in signed little endian order
+      ruot, urt, utt = struct.unpack('<LLL', payload[:12])  # unpack in unsigned little endian order
+    tmStmps = { "originate" : ot, "received" : rt, "transmit" : tt }  # set (at least) originate - others maybe overwritten
+    utmStmps = { "originate" : uot, "received" : urt, "transmit" : utt }  # set (at least) originate - others maybe overwritten
     if tmStmps["transmit"] < 0:  # A minus value indicates a non-standard timestamp is flagged
-      if optns["reverse"]:  # MS Windows uses little endian byte order in sent timestamps
-        nsot, nsrt, nstt = struct.unpack('<LLL', payload[:12])  # unpack in unsigned little endian order
-      else:
-      	nsot, nsrt, nstt = struct.unpack('!LLL', payload[:12])  # unpack in unsigned standard network order
-      tmStamps["received"] = nsrt  # use unsigned value in informUser....()
-      tmStamps["transmit"] = nstt  # use unsigned value in informUser....()
-      informUserAboutTimestampProblem('Non-standard transmit timestamp returned', tmStmps)
-      tmStamps["received"] = 0x7fffffffL & nsrt  # try crude fix of removing sign bit
-      tmStamps["transmit"] = 0x7fffffffL & nstt  # try crude fix of removing sign bit
-    if tmStmps["transmit"] > 86400000:
+      informUserAboutTimestampProblem('Non-standard transmit timestamp returned', utmStmps)
+    elif tmStmps["transmit"] > 86400000:
       informUserAboutTimestampProblem('timestamp returned is greater than the maximum mS in day', tmStmps)
     else:
       timeDiff = tmStmps["transmit"] - tmStmps["originate"]
