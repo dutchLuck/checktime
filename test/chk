@@ -2,7 +2,7 @@
 #
 # C H K
 #
-# Last modified on Sun Dec  3 17:26:21 2017 
+# Last modified on Wed Dec 28 21:14:19 2017 
 #
 #
 SYS_TYPE=`uname -s`
@@ -27,9 +27,9 @@ fi
 #
 echo
 echo ----------- Successful --Ping and Timestamp work--
-##
-## Local ADSL Router
-$PROG_UNDER_TEST $1 10.0.0.138
+####
+#### Local ADSL Router
+# $PROG_UNDER_TEST $1 10.0.0.138
 ####
 #### Local Windows XP SP3 computer, after ensuring echo+timestamp is on with; -
 ####  netsh firewall set icmpsetting 13 enable
@@ -66,6 +66,13 @@ $PROG_UNDER_TEST $1 www.freebsd.com www.netbsd.org
 ##
 ## Seems like a python program should naturally team up with www.python.org
 $PROG_UNDER_TEST $1 www.python.org
+#
+#
+echo
+echo ---------- Mostly successful --Non-Standard timestamp indication--
+##
+## Ping and timestamp succeed, but timestamp has non-standard flag set
+$PROG_UNDER_TEST $1 58.96.102.9
 #
 #
 echo

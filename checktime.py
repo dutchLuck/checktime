@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Tue Dec 22 20:29:00 2017
+# Last Modified on Tue Dec 28 21:14:57 2017
 #
 
 #
@@ -295,7 +295,9 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
     utmStmps = { "originate" : uot, "received" : urt, "transmit" : utt }  # set (at least) originate - others maybe overwritten
     if tmStmps["transmit"] < 0:  # A minus value indicates a non-standard timestamp is flagged
       informUserAboutTimestampProblem('Non-standard transmit timestamp returned', utmStmps)
-    elif tmStmps["transmit"] > 86400000:
+      tmStmps["received"] = long(0x7fffffff & utmStmps["received"])  # try removing non-standard bit
+      tmStmps["transmit"] = long(0x7fffffff & utmStmps["transmit"])  # try removing non-standard bit
+    if tmStmps["transmit"] > 86400000:
       informUserAboutTimestampProblem('timestamp returned is greater than the maximum mS in day', tmStmps)
     else:
       timeDiff = tmStmps["transmit"] - tmStmps["originate"]
