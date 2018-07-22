@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Tue Dec 28 21:14:57 2017
+# Last Modified on Sun Jul 22 21:30 2018
 #
 
 #
@@ -36,7 +36,7 @@ ICMP_INFORMATION_REQUEST = 15
 ICMP_INFORMATION_REPLY = 16
 
 _d_size = struct.calcsize('d')
-options = {"dgram" : False, "rawSck" : False, "debug" : False, "help" : False, "reverse" : False, "verbose" : False}
+options = {"dgram" : False, "rawSck" : False, "debug" : False, "help" : False, "reverse" : False, "verbose" : False, "wait" : float(2)}
 
 
 # Get the most accurate time available on the local system
@@ -431,7 +431,7 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
     print
   try:
     s = socket()
-    s.settimeout(2)
+    s.settimeout(optns["wait"])
   # Build an ICMP Echo Request Packet
     pingPacket = constructICMP_ECHO_REQUEST_Packet(1)
     if optns["debug"]:
@@ -492,7 +492,7 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
     print
   try:
     s = socket() # Attempt to open a socket
-    s.settimeout(2)
+    s.settimeout(optns["wait"])
   # Build an ICMP Timestamp Request Packet
     originateSequenceNumber = 1
     icmpTsReqPckt = constructICMP_TIMESTAMP_REQUEST_Packet(originateSequenceNumber)
@@ -565,20 +565,23 @@ def getLocalIP():
 
 
 def usage():
-  print 'Usage:\n%s [-dDhrv] [targetMachine ..[targetMachineN]]' % sys.argv[0]
+  print 'Usage:\n%s [-dDhrvwX.X] [targetMachine ..[targetMachineN]]' % sys.argv[0]
   print ' where; -\n   -d or --dgram    selects SOCK_DGRAM socket instead of SOCK_RAW socket'
   print '   -D or --debug    prints out Debug information'
   print '   -h or --help     outputs this usage message'
   print '   -m or --microsoft  reverses byte order of receive and transmit timestamps (suits MS Windows)'
   print '   -r or --raw      selects SOCK_RAW but is over-ridden by -d or --dgram'
   print '   -v or --verbose  prints verbose output'
+  print '   -wX.X            wait X.X sec instead of default 2 sec before timing-out'
   print '   targetMachine is either the name or IP address of the computer to ping'
+  print ' E.g.; -'
+  print '   ', sys.argv[0], ' -v -w5 127.0.0.1'
 
 
 # Get options and arguments from the command line
 def processCommandLine():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], "dDhmrv", ["dgram","debug","help","microsoft","reverse","verbose"])
+    opts, args = getopt.getopt(sys.argv[1:], "dDhmrvw:", ["dgram","debug","help","microsoft","raw","verbose"])
   except getopt.GetoptError as err:
     print str(err)
     usage()
@@ -596,8 +599,13 @@ def processCommandLine():
       options["rawSck"] = True
     elif o in ("-v", "--verbose"):
       options["verbose"] = True
+    elif o in ("-w"):
+      options["wait"] = float(a)
+      if options["wait"] < 0.0:
+        options["wait"] = 0.0
   if options["debug"]:
-  	options["verbose"] = True  # Debug implies verbose output
+    options["verbose"] = True  # Debug implies verbose output
+    print 'Time out wait period is ', options["wait"], 'secs'
   return args
  
 

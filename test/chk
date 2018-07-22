@@ -47,7 +47,7 @@ echo ----------- Successful --Ping and Timestamp work--
 $PROG_UNDER_TEST $1 tic.ntp.telstra.net toc.ntp.telstra.net
 ####
 #### Other ISP time sources
-# $PROG_UNDER_TEST $1 time.optus.net clock.exetel.com.au ntp.internode.on.net ntp.iprimus.com.au
+$PROG_UNDER_TEST $1 time.optus.net clock.exetel.com.au ntp.internode.on.net ntp.iprimus.com.au
 ####
 #### Australian National Measurements Institute (Australian Time Standard)
 # $PROG_UNDER_TEST $1 ntp.sydney.nmi.gov.au ntp.melbourne.nmi.gov.au ntp.adelaide.nmi.gov.au ntp.brisbane.nmi.gov.au
@@ -61,8 +61,8 @@ $PROG_UNDER_TEST $1 tic.ntp.telstra.net toc.ntp.telstra.net
 #### Hosted in the cloud (by akamai?, akamaiedge?)
 # $PROG_UNDER_TEST $1 www.vodafone.com.au www.optus.com.au www.abc.net.au www.commbank.com.au
 ##
-## FreeBSD and NetBSD machines
-$PROG_UNDER_TEST $1 www.freebsd.com www.netbsd.org
+## FreeBSD and Ubuntu machines
+$PROG_UNDER_TEST $1 www.freebsd.org www.ubuntu.org
 ##
 ## Seems like a python program should naturally team up with www.python.org
 $PROG_UNDER_TEST $1 www.python.org
