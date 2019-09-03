@@ -69,6 +69,13 @@ $PROG_UNDER_TEST $1 www.python.org
 #
 #
 echo
+echo ---------- Successful --Little Endian timestamps returned--------
+##
+## Ping and timestamp succeed, but timestamp is non-standard (little endian)
+$PROG_UNDER_TEST $1 wwh-2.onthe.net.au www.promptims.com.au
+#
+#
+echo
 echo ---------- Mostly successful --Non-Standard timestamp indication--
 ##
 ## Ping and timestamp succeed, but timestamp has non-standard flag set
@@ -76,7 +83,7 @@ $PROG_UNDER_TEST $1 58.96.102.9
 #
 #
 echo
-echo ---------- Unsuccessful so far --Destination Unreachable--
+echo ---------- Unsuccessful so far --Destination Unreachable------
 ##
 ## Ping succeeds but timestamp gets a destination unreachable reply
 $PROG_UNDER_TEST $1 time.iinet.com.au

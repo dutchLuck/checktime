@@ -36,7 +36,7 @@ ICMP_INFORMATION_REQUEST = 15
 ICMP_INFORMATION_REPLY = 16
 
 _d_size = struct.calcsize('d')
-options = {"dgram" : False, "rawSck" : False, "debug" : False, "help" : False, "reverse" : False, "verbose" : False, "wait" : float(2)}
+options = {"dgram" : False, "rawSck" : False, "debug" : False, "help" : False, "standard" : False, "reverse" : False, "verbose" : False, "wait" : float(2)}
 
 
 # Get the most accurate time available on the local system
@@ -287,20 +287,38 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
     if optns["verbose"]:
       labelAndPrintDataStringInHex('The truncated ICMP data in hex is; -',payoad)
   else:
-    ot, rt, tt = struct.unpack('!lll', payload[:12])  # unpack in signed standard network order
-    uot, urt, utt = struct.unpack('!LLL', payload[:12])  # unpack in unsigned standard network order
-    if optns["reverse"]:  # MS Windows uses little endian byte order in sent timestamps
-      rot, rt, tt = struct.unpack('<lll', payload[:12])  # unpack in signed little endian order
-      ruot, urt, utt = struct.unpack('<LLL', payload[:12])  # unpack in unsigned little endian order
-    tmStmps["originate"] = ot  # set signed originate value, which is assumed to be in proper format
-    tmStmps["received"] = rt  # set signed received stamp value - may yet be overwritten
-    tmStmps["transmit"] = tt  # set signed transmit stamp value - may yet be overwritten
-    utmStmps = { "originate" : uot, "received" : urt, "transmit" : utt }  # set (at least) originate - others maybe overwritten
-    if tmStmps["transmit"] < 0:  # A minus value indicates a non-standard timestamp is flagged
+    ot, rt, tt = struct.unpack('!lll', payload[:12])        # unpack in signed standard network order
+    uot, urt, utt = struct.unpack('!LLL', payload[:12])     # unpack in unsigned standard network order
+    rot, rrt, rtt = struct.unpack('<lll', payload[:12])     # unpack in signed little endian order
+    ruot, rurt, rutt = struct.unpack('<LLL', payload[:12])  # unpack in unsigned little endian order
+    if (tt <= 86400000 and tt >= 0) and (rtt <= 86400000 and rtt >= 0):  # if both big and little endian representations are in the valid range then
+      optns["standard"] = ( abs(tt - ot) <= abs(rtt - ot) and not optns["reverse"])  # force big endian if it gives smaller diff unless -m was specified
+    if optns["standard"] or ((not optns["reverse"]) and (tt <= 86400000 and tt >= 0)):  # use Big endian byte order
+      tmStmps["originate"] = ot   # set signed originate value, which is assumed to be in proper format
+      tmStmps["received"] = rt    # set signed received stamp value
+      tmStmps["transmit"] = tt    # set signed transmit stamp value
+      utmStmps = { "originate" : uot, "received" : urt, "transmit" : utt }  # set (at least) originate
+      if optns["debug"]:
+        print 'Big endian byte order used to process returned timestamps'
+    elif optns["reverse"] or (rtt <= 86400000 and rtt >= 0):   # use Little endian byte order on returned timestamps
+      tmStmps["originate"] = ot   # set signed originate value, which is assumed to be in proper format
+      tmStmps["received"] = rrt   # set signed received stamp value
+      tmStmps["transmit"] = rtt   # set signed transmit stamp value
+      utmStmps = { "originate" : ruot, "received" : rurt, "transmit" : rutt }  # set (at least) originate
+      if optns["debug"]:
+        print 'Little endian byte order used to process returned timestamps'
+    else:                       # Catch all is to assume big endian even though out of valid range
+      tmStmps["originate"] = ot   # set signed originate value, which is assumed to be in proper format
+      tmStmps["received"] = rt    # set signed big endian received stamp value
+      tmStmps["transmit"] = tt    # set signed big endian transmit stamp value
+      utmStmps = { "originate" : uot, "received" : urt, "transmit" : utt }  # set (at least) originate
+      if optns["debug"]:
+        print 'Big endian byte order used to process returned timestamps'
+    if tmStmps["transmit"] < 0:   # A minus value indicates a non-standard timestamp is flagged
       informUserAboutTimestampProblem('Non-standard transmit timestamp returned', utmStmps)
       tmStmps["received"] = long(0x7fffffff & utmStmps["received"])  # try removing non-standard bit
       tmStmps["transmit"] = long(0x7fffffff & utmStmps["transmit"])  # try removing non-standard bit
-    if tmStmps["transmit"] > 86400000:
+    if tmStmps["transmit"] > 86400000: # 86400000 mS is a normal day but could be in too low on special days when leap seconds are added
       informUserAboutTimestampProblem('timestamp returned is greater than the maximum mS in day', tmStmps)
     else:
       parsedOk = True
@@ -581,7 +599,7 @@ def usage():
 # Get options and arguments from the command line
 def processCommandLine():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], "dDhmrvw:", ["dgram","debug","help","microsoft","raw","verbose"])
+    opts, args = getopt.getopt(sys.argv[1:], "dDhmrsvw:", ["dgram","debug","help","microsoft","raw","standard","verbose"])
   except getopt.GetoptError as err:
     print str(err)
     usage()
@@ -597,6 +615,8 @@ def processCommandLine():
       options["reverse"] = True
     elif o in ("-r", "--raw"):
       options["rawSck"] = True
+    elif o in ("-s", "--standard"):
+      options["standard"] = True
     elif o in ("-v", "--verbose"):
       options["verbose"] = True
     elif o in ("-w"):
@@ -606,6 +626,8 @@ def processCommandLine():
   if options["debug"]:
     options["verbose"] = True  # Debug implies verbose output
     print 'Time out wait period is ', options["wait"], 'secs'
+  if options["standard"] and options["reverse"]:
+    options["reverse"] = False # standard option mutually exclusive of reverse
   return args
  
 
