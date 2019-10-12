@@ -2,7 +2,7 @@
 #
 # C H K
 #
-# Last modified on Wed Dec 28 21:14:19 2017 
+# Last modified on Sat Oct 12 19:56:59 2019 
 #
 #
 SYS_TYPE=`uname -s`
@@ -25,42 +25,32 @@ else
  fi
 fi
 #
+#
 echo
-echo ----------- Successful --Ping and Timestamp work--
+echo ----------- Successful --Ping and Timestamp work-------
 ####
-#### Local ADSL Router
-# $PROG_UNDER_TEST $1 10.0.0.138
-####
-#### Local Windows XP SP3 computer, after ensuring echo+timestamp is on with; -
-####  netsh firewall set icmpsetting 13 enable
-####  netsh firewall set icmpsetting 8 enable
-# $PROG_UNDER_TEST $1 -r 10.0.0.84
-####
-#### Local Windows 10 Home computer, after ensuring timestamp is on with; -
-####  netsh advfirewall firewall add rule name="Allow-ICMP-V4-Timestamp" protocol=icmpv4:13,0 dir=in action=allow
-# $PROG_UNDER_TEST $1 -r 10.0.0.62
-####
-#### Local Android Phone
-# $PROG_UNDER_TEST $1 android-ae6a6ccb5592abd3
+## Low (6-7mS) RTT ISP time source
+$PROG_UNDER_TEST $1 tic.ntp.telstra.net 
 ##
-## ISP time sources
-$PROG_UNDER_TEST $1 tic.ntp.telstra.net toc.ntp.telstra.net
-####
-#### Other ISP time sources
-$PROG_UNDER_TEST $1 time.optus.net clock.exetel.com.au ntp.internode.on.net ntp.iprimus.com.au
-####
-#### Australian National Measurements Institute (Australian Time Standard)
-# $PROG_UNDER_TEST $1 ntp.sydney.nmi.gov.au ntp.melbourne.nmi.gov.au ntp.adelaide.nmi.gov.au ntp.brisbane.nmi.gov.au
-####
-#### Swedish time sources
-# $PROG_UNDER_TEST $1 ntp1.sp.se time1.stupi.se
-####
-#### Three DNS names, but one IP Address
-# $PROG_UNDER_TEST $1 time.apple.asia.com time.microsoft.asia.com time.linux.asia.com
-####
-#### Hosted in the cloud (by akamai?, akamaiedge?)
-# $PROG_UNDER_TEST $1 www.vodafone.com.au www.optus.com.au www.abc.net.au www.commbank.com.au
+## Med (18-19mS) RTT ISP time source
+$PROG_UNDER_TEST $1 time.optus.net
 ##
+## 42-43mS RTT NZ time source
+$PROG_UNDER_TEST $1 s2.ntp.net.nz
+##
+## 226-227mS RTT US time source
+$PROG_UNDER_TEST $1 clock.he.net
+##
+## 309-312mS RTT French time source
+$PROG_UNDER_TEST $1 ntp.obspm.fr
+##
+## 348-364mS RTT Swedish time source
+$PROG_UNDER_TEST $1 time1.stupi.se
+#
+#
+echo
+echo ---------- Successful --Big Endian timestamps returned--------
+####
 ## FreeBSD and Ubuntu machines
 $PROG_UNDER_TEST $1 www.freebsd.org www.ubuntu.org
 ##
@@ -70,21 +60,21 @@ $PROG_UNDER_TEST $1 www.python.org
 #
 echo
 echo ---------- Successful --Little Endian timestamps returned--------
-##
+####
 ## Ping and timestamp succeed, but timestamp is non-standard (little endian)
-$PROG_UNDER_TEST $1 wwh-2.onthe.net.au www.promptims.com.au
+$PROG_UNDER_TEST $1 wwh-2.onthe.net.au
 #
 #
 echo
 echo ---------- Mostly successful --Non-Standard timestamp indication--
-##
+####
 ## Ping and timestamp succeed, but timestamp has non-standard flag set
 $PROG_UNDER_TEST $1 58.96.102.9
 #
 #
 echo
-echo ---------- Unsuccessful so far --Destination Unreachable------
-##
+echo ---------- Mostly unsuccessful --Destination Unreachable------
+####
 ## Ping succeeds but timestamp gets a destination unreachable reply
 $PROG_UNDER_TEST $1 time.iinet.com.au
 ##
@@ -93,50 +83,30 @@ $PROG_UNDER_TEST $1 www.openbsd.org
 #
 #
 echo
-echo ---------- Unsuccessful so far --Ping works, but no Timestamp--
+echo ---------- Unsuccessful --Ping fails, but Timestamp works--
 ####
-#### Local Windows XP SP3 computer, after ensuring timestamp is off with; -
-####  netsh firewall set icmpsetting 13 disable
-#### and ensure Ping (echo) is on with; -
-####  netsh firewall set icmpsetting 8 enable
-# $PROG_UNDER_TEST $1 -r 10.0.0.84
-####
-#### Local Windows 10 Home computer, after ensuring previously created firewall
-#### rule allowing timestamp is removed with; -
-####  netsh advfirewall firewall delete rule name="Allow-ICMP-V4-Timestamp" protocol=icmpv4:13,0 dir=in
-# $PROG_UNDER_TEST $1 -r 10.0.0.62
-####
-#### Local Apple iPad tablet
-# $PROG_UNDER_TEST $1 iPad
-####
-# $PROG_UNDER_TEST $1 time.google.com
-##
-$PROG_UNDER_TEST $1 ntp.tpg.com.au www.telstra.com.au
-####
-# $PROG_UNDER_TEST $1 ntp.aussiebroadband.com.au
-##
-$PROG_UNDER_TEST $1 time.asia.apple.com
-####
-# $PROG_UNDER_TEST $1 time.apple.com time.apple.com.au
-####
-# $PROG_UNDER_TEST $1 ntp.adam.com.au
+## Ping fails, but timestamp succeeds
+$PROG_UNDER_TEST $1 ntp-m.obspm.fr
 #
 #
 echo
-echo ---------- Unsuccessful so far --Ping fails and no Timestamp, but DNS ok--
-##
-$PROG_UNDER_TEST $1 time.windows.com
-##
-$PROG_UNDER_TEST $1 ntp.perth.nmi.gov.au
+echo ---------- Unsuccessful --Ping works, but no Timestamp--
 ####
-#### Local Windows XP SP3 computer, after ensuring echo+timestamp is off with; -
-####  netsh firewall set icmpsetting 13 disable
-####  netsh firewall set icmpsetting 8 disable
-# $PROG_UNDER_TEST $1 -r 10.0.0.84
+## Ping succeeds, but timestamp fails
+$PROG_UNDER_TEST $1 ntp.tpg.com.au
+#
+#
+echo
+echo ---------- Unsuccessful on purpose --Both Ping and Timestamp fail, but DNS ok--
+####
+## DNS ok, but no replies
+$PROG_UNDER_TEST $1 time.windows.com
 #
 #
 echo
 echo ---------- Unsuccessful on purpose --Test response to non-existant name--
+####
+## DNS fails
 $PROG_UNDER_TEST $1 time.microsoft.com
 #
 
