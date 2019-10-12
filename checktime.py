@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Sun Jul 22 21:30 2018
+# Last Modified on Sat Oct 12 22:04:05 2019
 #
 
 #
@@ -36,7 +36,7 @@ ICMP_INFORMATION_REQUEST = 15
 ICMP_INFORMATION_REPLY = 16
 
 _d_size = struct.calcsize('d')
-options = {"dgram" : False, "rawSck" : False, "debug" : False, "help" : False, "standard" : False, "reverse" : False, "verbose" : False, "wait" : float(2)}
+options = {"correction" : False, "dgram" : False, "rawSck" : False, "debug" : False, "help" : False, "standard" : False, "reverse" : False, "verbose" : False, "wait" : float(2)}
 
 
 # Get the most accurate time available on the local system
@@ -546,7 +546,12 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
         else:
           success, tStamps = parseICMP_TIMESTAMP_REPLY_Packet(icmpHdr, icmpPayload, optns)
           if success:
-            tDiff = tStamps["transmit"] - tStamps["originate"]
+            if optns["correction"]:
+            # Calculate time difference in mS as straight forward subtraction - correction disabled
+              tDiff = tStamps["transmit"] - tStamps["originate"]
+            else:
+            # Calculate time difference using naive correction of half the Round Trip Time in mS
+              tDiff = tStamps["transmit"] - tStamps["originate"] - ( 500.0 * ( recvTime - sentTime ))
             s.close()
             print '"%s"' % address,
             informUserAboutTimestamp('Transmit', tStamps["transmit"])
@@ -583,8 +588,9 @@ def getLocalIP():
 
 
 def usage():
-  print 'Usage:\n%s [-dDhrvwX.X] [targetMachine ..[targetMachineN]]' % sys.argv[0]
-  print ' where; -\n   -d or --dgram    selects SOCK_DGRAM socket instead of SOCK_RAW socket'
+  print 'Usage:\n%s [-cdDhrvwX.X] [targetMachine ..[targetMachineN]]' % sys.argv[0]
+  print ' where; -\n   -c or --correction   disable naive half RTT correction to time difference'
+  print '   -d or --dgram    selects SOCK_DGRAM socket instead of SOCK_RAW socket'
   print '   -D or --debug    prints out Debug information'
   print '   -h or --help     outputs this usage message'
   print '   -m or --microsoft  reverses byte order of receive and transmit timestamps (suits MS Windows)'
@@ -599,13 +605,15 @@ def usage():
 # Get options and arguments from the command line
 def processCommandLine():
   try:
-    opts, args = getopt.getopt(sys.argv[1:], "dDhmrsvw:", ["dgram","debug","help","microsoft","raw","standard","verbose"])
+    opts, args = getopt.getopt(sys.argv[1:], "cdDhmrsvw:", ["correction","dgram","debug","help","microsoft","raw","standard","verbose"])
   except getopt.GetoptError as err:
     print str(err)
     usage()
     sys.exit()
   for o, a in opts:
-    if o in ("-d", "--dgram"):
+    if o in ("-c", "--correction"):
+      options["correction"] = True
+    elif o in ("-d", "--dgram"):
       options["dgram"] = True
     elif o in ("-D", "--debug"):
       options["debug"] = True
