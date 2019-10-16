@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Sat Oct 12 22:04:05 2019
+# Last Modified on Wed Oct 16 23:20:47 2019
 #
 
 #
@@ -494,11 +494,15 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
       else:
         informUserIfRequired(0,'Received an ICMP packet, but not an Echo Reply or Destination Unreachable',packet)
     return recvTime - sentTime
+  except _socket.timeout, msg:
+    if optns["verbose"]:
+      printTargetNameAndOrIP_Address(address,addr)
+      print '%s sec wait for ping reply %s' % (optns["wait"],msg)
+    return 9.999999
   except _socket.error, msg:
     if optns["verbose"]:
-      print '?? An error occurred in the Ping',
       printTargetNameAndOrIP_Address(address,addr)
-      print 'attempt:', msg
+      print 'ping attempt failed due to: %s' % msg
     return 9.999999
 
 
@@ -553,7 +557,7 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
             # Calculate time difference using naive correction of half the Round Trip Time in mS
               tDiff = tStamps["transmit"] - tStamps["originate"] - ( 500.0 * ( recvTime - sentTime ))
             s.close()
-            print '"%s"' % address,
+            print '"%s" (%s)' % (address,addr),
             informUserAboutTimestamp('Transmit', tStamps["transmit"])
             break
       elif isAnIPv4_ICMP_DestinationUnreachablePacket(receivedPacket):  # Process any packets that are ICMP Destination Unreachable
@@ -567,9 +571,14 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
           informUserIfRequired(0,'The ICMP Destination Unreachable was not in response to our Timestamp Request',receivedPacket)   
       else:
         informUserIfRequired(0,'Received an ICMP packet, but not a Timestamp Reply or Destination Unreachable',receivedPacket)
+  except _socket.timeout, msg:
+    if optns["verbose"]:
+      printTargetNameAndOrIP_Address(address,addr)
+      print '%s sec wait for timestamp reply %s' % (optns["wait"],msg)
   except _socket.error, msg:
     if optns["verbose"]:
-      print 'Unable to get ICMP timestamp due to:', msg, '\n'
+      printTargetNameAndOrIP_Address(address,addr)
+      print 'timestamp acquisition failed due to: %s' % msg
   finally:
     return tDiff
 
@@ -639,31 +648,34 @@ def processCommandLine():
   return args
  
 
-def printPingTime( trgtAddr, startTime ):
+def pingAndPrintTimeStamp( trgtAddr, startTime ):
   try:
-# Turn Target Computer name into an IP Address if a name was specified
+  # Turn Target Computer name into an IP Address if a name was specified
     trgtIP_Addr = _socket.gethostbyname(trgtAddr)
-# Ping the specified computer
+  # Ping the specified computer
     travelTime = pingWithICMP_ECHO_REQUEST_Packet(trgtAddr, trgtIP_Addr, options)
-    if travelTime <= (getClockTime() - startTime):  # If Ping fails then the travel time is deliberatly set large
+    if travelTime <= (getClockTime() - startTime):  # If Ping fails then the travel time is deliberately set large
       if options["verbose"]:
-	print 'Ping round trip time to "%s" was: %9.3f mS.' % (trgtAddr,travelTime * 1000)
+        printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
+	print 'ping round trip time was: %9.3f mS.' % (travelTime * 1000)
     else:
-      print 'ping',
-      printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
-      print 'failed'
-# Get Timestamp from the specified computer
+    # If the verbose flag was specified then this print is superfluous
+      if not options["verbose"]:
+        printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
+        print 'ping failed'
+  # Get Timestamp from the specified computer
     osTimeDiff = pingWithICMP_TIMESTAMP_REQUEST_Packet(trgtAddr, trgtIP_Addr, options)
-    if osTimeDiff != 999999l:  # If icmp timestamp request fails then the time difference is deliberatly set large
+    if osTimeDiff != 999999l:  # If icmp timestamp request fails then the time difference is deliberately set large
       print '"%s" Transmit - Originate timestamps time difference was: %ld mS' % (trgtAddr,osTimeDiff)
     else:
-      print 'timestamp request to',
-      printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
-      print 'failed'
+    # If the verbose flag was specified then this print is superfluous
+      if not options["verbose"]:
+        printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
+        print 'timestamp acquisition failed'
+  except _socket.gaierror, msg:
+    print '"%s" Target Name problem: %s' % (trgtAddr, msg)
   except _socket.error, msg:
-    print 'Target Computer "%s"' % trgtAddr,
-    print 'problem; -'
-    print ' "%s"' %  msg
+    print '"%s" Target Computer problem: %s' % (trgtAddr, msg)
 
 
 def main():
@@ -683,7 +695,7 @@ def main():
       usage()
 # Step through timestamp targets specified on the command line
   for trgtAddr in args:
-    printPingTime(trgtAddr, startTime)
+    pingAndPrintTimeStamp(trgtAddr, getClockTime())
   if options["debug"]:
     print '\nchecktime.py execution time was: %9.3f mS.\n' % ((getClockTime() - startTime) * 1000)
 
