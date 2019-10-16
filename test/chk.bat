@@ -3,63 +3,58 @@ REM #! /bin/sh
 REM # 
 REM # C H K 
 REM # 
-REM # Last modified on Wed Dec 28 21:14:19 2017  
+REM # Last modified on Sat Oct 12 19:56:59 2019  
 REM # 
 REM # 
 REM # 
 REM # Linux and other similar systems need sudo, 
 REM #  however Mac OSX does not need sudo 
 REM # 
+REM # 
 ECHO  ----------- Successful 
 REM #### 
-REM #### Local ADSL Router 
-REM # $PROG_UNDER_TEST $1 10.0.0.138 
-REM #### 
-REM #### Local Windows XP SP3 computer, after ensuring echo+timestamp is on with; - 
-REM ####  netsh firewall set icmpsetting 13 enable 
-REM ####  netsh firewall set icmpsetting 8 enable 
-REM # $PROG_UNDER_TEST $1 -r 10.0.0.84 
-REM #### 
-REM #### Local Windows 10 Home computer, after ensuring timestamp is on with; - 
-REM ####  netsh advfirewall firewall add rule name="Allow-ICMP-V4-Timestamp" protocol=icmpv4:13,0 dir=in action=allow 
-REM # $PROG_UNDER_TEST $1 -r 10.0.0.62 
-REM #### 
-REM #### Local Android Phone 
-REM # $PROG_UNDER_TEST $1 android-ae6a6ccb5592abd3 
+REM ## Low (6-7mS) RTT ISP time source 
+python ..\checktime.py %1 tic.ntp.telstra.net  
 REM ## 
-REM ## ISP time sources 
-python ..\checktime.py %1 tic.ntp.telstra.net toc.ntp.telstra.net 
-REM #### 
-REM #### Other ISP time sources 
-REM # $PROG_UNDER_TEST $1 time.optus.net clock.exetel.com.au ntp.internode.on.net ntp.iprimus.com.au 
-REM #### 
-REM #### Australian National Measurements Institute (Australian Time Standard) 
-REM # $PROG_UNDER_TEST $1 ntp.sydney.nmi.gov.au ntp.melbourne.nmi.gov.au ntp.adelaide.nmi.gov.au ntp.brisbane.nmi.gov.au 
-REM #### 
-REM #### Swedish time sources 
-REM # $PROG_UNDER_TEST $1 ntp1.sp.se time1.stupi.se 
-REM #### 
-REM #### Three DNS names, but one IP Address 
-REM # $PROG_UNDER_TEST $1 time.apple.asia.com time.microsoft.asia.com time.linux.asia.com 
-REM #### 
-REM #### Hosted in the cloud (by akamai?, akamaiedge?) 
-REM # $PROG_UNDER_TEST $1 www.vodafone.com.au www.optus.com.au www.abc.net.au www.commbank.com.au 
+REM ## Med (18-19mS) RTT ISP time source 
+python ..\checktime.py %1 time.optus.net  
 REM ## 
-REM ## FreeBSD and NetBSD machines 
-python ..\checktime.py %1 www.freebsd.com www.netbsd.org 
+REM ## 42-43mS RTT NZ time source 
+python ..\checktime.py %1 s2.ntp.net.nz  
+REM ## 
+REM ## 226-227mS RTT US time source 
+python ..\checktime.py %1 clock.he.net  
+REM ## 
+REM ## 309-312mS RTT French time source 
+python ..\checktime.py %1 ntp.obspm.fr  
+REM ## 
+REM ## 348-364mS RTT Swedish time source 
+python ..\checktime.py %1 time1.stupi.se  
+REM # 
+REM # 
+ECHO  ---------- Successful 
+REM #### 
+REM ## FreeBSD and Ubuntu machines 
+python ..\checktime.py %1 www.freebsd.org www.ubuntu.org 
 REM ## 
 REM ## Seems like a python program should naturally team up with www.python.org 
 python ..\checktime.py %1 www.python.org  
 REM # 
 REM # 
+ECHO  ---------- Successful 
+REM #### 
+REM ## Ping and timestamp succeed, but timestamp is non-standard (little endian) 
+python ..\checktime.py %1 wwh-2.onthe.net.au  
+REM # 
+REM # 
 ECHO  ---------- Mostly 
-REM ## 
+REM #### 
 REM ## Ping and timestamp succeed, but timestamp has non-standard flag set 
 python ..\checktime.py %1 58.96.102.9  
 REM # 
 REM # 
-ECHO  ---------- Unsuccessful 
-REM ## 
+ECHO  ---------- Mostly 
+REM #### 
 REM ## Ping succeeds but timestamp gets a destination unreachable reply 
 python ..\checktime.py %1 time.iinet.com.au  
 REM ## 
@@ -69,45 +64,24 @@ REM #
 REM # 
 ECHO  ---------- Unsuccessful 
 REM #### 
-REM #### Local Windows XP SP3 computer, after ensuring timestamp is off with; - 
-REM ####  netsh firewall set icmpsetting 13 disable 
-REM #### and ensure Ping (echo) is on with; - 
-REM ####  netsh firewall set icmpsetting 8 enable 
-REM # $PROG_UNDER_TEST $1 -r 10.0.0.84 
-REM #### 
-REM #### Local Windows 10 Home computer, after ensuring previously created firewall 
-REM #### rule allowing timestamp is removed with; - 
-REM ####  netsh advfirewall firewall delete rule name="Allow-ICMP-V4-Timestamp" protocol=icmpv4:13,0 dir=in 
-REM # $PROG_UNDER_TEST $1 -r 10.0.0.62 
-REM #### 
-REM #### Local Apple iPad tablet 
-REM # $PROG_UNDER_TEST $1 iPad 
-REM #### 
-REM # $PROG_UNDER_TEST $1 time.google.com 
-REM ## 
-python ..\checktime.py %1 ntp.tpg.com.au www.telstra.com.au 
-REM #### 
-REM # $PROG_UNDER_TEST $1 ntp.aussiebroadband.com.au 
-REM ## 
-python ..\checktime.py %1 time.asia.apple.com  
-REM #### 
-REM # $PROG_UNDER_TEST $1 time.apple.com time.apple.com.au 
-REM #### 
-REM # $PROG_UNDER_TEST $1 ntp.adam.com.au 
+REM ## Ping fails, but timestamp succeeds 
+python ..\checktime.py %1 ntp-m.obspm.fr  
 REM # 
 REM # 
 ECHO  ---------- Unsuccessful 
-REM ## 
+REM #### 
+REM ## Ping succeeds, but timestamp fails 
+python ..\checktime.py %1 ntp.tpg.com.au  
+REM # 
+REM # 
+ECHO  ---------- Unsuccessful 
+REM #### 
+REM ## DNS ok, but no replies 
 python ..\checktime.py %1 time.windows.com  
-REM ## 
-python ..\checktime.py %1 ntp.perth.nmi.gov.au  
-REM #### 
-REM #### Local Windows XP SP3 computer, after ensuring echo+timestamp is off with; - 
-REM ####  netsh firewall set icmpsetting 13 disable 
-REM ####  netsh firewall set icmpsetting 8 disable 
-REM # $PROG_UNDER_TEST $1 -r 10.0.0.84 
 REM # 
 REM # 
 ECHO  ---------- Unsuccessful 
+REM #### 
+REM ## DNS fails 
 python ..\checktime.py %1 time.microsoft.com  
 REM # 
