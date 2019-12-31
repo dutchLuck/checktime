@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Wed Oct 16 23:20:47 2019
+# Last Modified on Tue Dec 31 23:15:15 2019
 #
 
 #
@@ -324,8 +324,7 @@ def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
     return timeStamp
 
 
-def informUserAboutTimestamp(msg, timeStamp):
-    print msg, "timestamp returned was",
+def printTimeStampAsHrsMinSecsSinceMidnight(timeStamp):
     tsTm = convertMillisecondsSinceMidnight(timeStamp)
     print "%02ld:%02ld:%02ld.%03ld" % (
         tsTm["hours"],
@@ -333,8 +332,13 @@ def informUserAboutTimestamp(msg, timeStamp):
         tsTm["seconds"],
         tsTm["milliSeconds"],
     ),
+
+
+def informUserAboutTimestamp(msg, timeStamp):
+    print msg, "timestamp returned was",
+    printTimeStampAsHrsMinSecsSinceMidnight(timeStamp)
     if options["verbose"]:
-        print "- (%ld (0x%08x) mS since midnight UTC)" % (timeStamp, timeStamp)
+        print "(%ld (0x%08x) mS since midnight UTC)" % (timeStamp, timeStamp)
     else:
         print
 
@@ -357,6 +361,8 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
         "originate": 0L,
         "received": 0L,
         "transmit": 0L,
+        "compensation": 0L,
+        "difference": 0L,
     }  # preset timestamps to 0
     if optns["debug"]:
         print "\n----------- ICMP Time Stamp Reply is; -"
@@ -687,8 +693,27 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
         return 9.999999
 
 
+def calculateMostLikelyTimeDifference(
+    remote_ms_sinceMidnight, local_ms_sinceMidnight, compensation
+):
+    tDiff = remote_ms_sinceMidnight - local_ms_sinceMidnight - compensation
+    if abs(tDiff) > 43200000L:
+        if remote_ms_sinceMidnight < 43200000L:
+            tDiff += 86400000L
+        else:
+            tDiff -= 86400000L
+    return tDiff
+
+
 def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
-    tDiff = 999999L
+    success = False
+    tStamps = {
+        "originate": 0L,
+        "received": 0L,
+        "transmit": 0L,
+        "compensation": 0L,
+        "difference": 0L,
+    }  # preset timestamps to 0
     if optns["debug"]:
         print "\n--- Attempting to get ICMP timestamp from",
         printTargetNameAndOrIP_Address(address, addr)
@@ -756,18 +781,19 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
                     )
                     if success:
                         if optns["correction"]:
-                            # Calculate time difference in mS as straight forward subtraction - correction disabled
-                            tDiff = tStamps["transmit"] - tStamps["originate"]
+                            # Calculate time difference in mS as straight forward subtraction - correction 0 mS
+                            tStamps["compensation"] = 0L
                         else:
                             # Calculate time difference using naive correction of half the Round Trip Time in mS
-                            tDiff = (
-                                tStamps["transmit"]
-                                - tStamps["originate"]
-                                - (500.0 * (recvTime - sentTime))
+                            tStamps["compensation"] = long(
+                                500.0 * (recvTime - sentTime)
                             )
+                        tStamps["difference"] = calculateMostLikelyTimeDifference(
+                            tStamps["transmit"],
+                            tStamps["originate"],
+                            tStamps["compensation"],
+                        )
                         s.close()
-                        print '"%s" (%s)' % (address, addr),
-                        informUserAboutTimestamp("Transmit", tStamps["transmit"])
                         break
             elif isAnIPv4_ICMP_DestinationUnreachablePacket(
                 receivedPacket
@@ -809,7 +835,7 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
             printTargetNameAndOrIP_Address(address, addr)
             print "timestamp acquisition failed due to: %s" % msg
     finally:
-        return tDiff
+        return success, tStamps
 
 
 # Obtain the local machines IPv4 address
@@ -908,16 +934,17 @@ def pingAndPrintTimeStamp(trgtAddr, startTime):
                 printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
                 print "ping failed"
         # Get Timestamp from the specified computer
-        osTimeDiff = pingWithICMP_TIMESTAMP_REQUEST_Packet(
+        successful, timeStamps = pingWithICMP_TIMESTAMP_REQUEST_Packet(
             trgtAddr, trgtIP_Addr, options
         )
-        if (
-            osTimeDiff != 999999L
-        ):  # If icmp timestamp request fails then the time difference is deliberately set large
-            print '"%s" Transmit - Originate timestamps time difference was: %ld mS' % (
-                trgtAddr,
-                osTimeDiff,
-            )
+        if successful:
+            print '"%s" (%s)' % (trgtAddr, trgtIP_Addr),
+            informUserAboutTimestamp("Transmit", timeStamps["transmit"])
+            print '"%s"' % trgtAddr,
+            printTimeStampAsHrsMinSecsSinceMidnight(timeStamps["transmit"])
+            print "-",
+            printTimeStampAsHrsMinSecsSinceMidnight(timeStamps["originate"])
+            print "-> estimated difference: %ld mS" % (timeStamps["difference"],)
         else:
             # If the verbose flag was specified then this print is superfluous
             if not options["verbose"]:
@@ -940,8 +967,8 @@ def main():
         usage()
         localInterface = getLocalIP()
         print "\nDefaulting to ping the local interface (%s)" % localInterface
-        printPingTime(
-            localInterface, startTime
+        pingAndPrintTimeStamp(
+            localInterface, getClockTime()
         )  # If there is no target specified then use local Interface IP
     else:
         if options["help"]:
