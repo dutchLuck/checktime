@@ -18,3 +18,30 @@ Command line options can be used to force the timestamp to be interpreted either
 Options are outlined by using the --help command line option. This program requires privileged access
 to the network interface, except on Apple Mac OSX. This is normally provided by using the sudo command
 on linux and running as Administrator on Windows.
+
+The checktime.py command has a number of options which are outlined in the useage information.
+
+```
+$ sudo ./checktime.py --help
+
+?? Please specify the computer to ping?
+
+Usage:
+./checktime.py [-cdDhrvwX.X] [targetMachine ..[targetMachineN]]
+ where; -
+   -c or --correction   disable naive half RTT correction to time difference
+   -d or --dgram    selects SOCK_DGRAM socket instead of SOCK_RAW socket
+   -D or --debug    prints out Debug information
+   -h or --help     outputs this usage message
+   -m or --microsoft  reverses byte order of receive and transmit timestamps (suits MS Windows)
+   -r or --raw      selects SOCK_RAW but is over-ridden by -d or --dgram
+   -v or --verbose  prints verbose output
+   -wX.X            wait X.X sec instead of default 2 sec before timing-out
+   targetMachine is either the name or IP address of the computer to ping
+ E.g.; -
+    ./checktime.py  -v -w5 127.0.0.1
+
+Defaulting to ping the local interface (10.0.0.2)
+"10.0.0.2" (10.0.0.2) Transmit timestamp returned was 12:48:42.706
+"10.0.0.2" 12:48:42.706 - 12:48:42.706 -> estimated difference: 0 mS
+```
