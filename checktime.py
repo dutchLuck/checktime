@@ -37,6 +37,7 @@ ICMP_INFORMATION_REPLY = 16
 
 _d_size = struct.calcsize("d")
 options = {
+    "count": int(1),
     "correction": False,
     "dgram": False,
     "rawSck": False,
@@ -780,20 +781,23 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
                         icmpHdr, icmpPayload, optns
                     )
                     if success:
+                        travelTime = recvTime - sentTime
                         if optns["correction"]:
                             # Calculate time difference in mS as straight forward subtraction - correction 0 mS
                             tStamps["compensation"] = 0L
                         else:
                             # Calculate time difference using naive correction of half the Round Trip Time in mS
-                            tStamps["compensation"] = long(
-                                500.0 * (recvTime - sentTime)
-                            )
+                            tStamps["compensation"] = long(500.0 * travelTime)
                         tStamps["difference"] = calculateMostLikelyTimeDifference(
                             tStamps["transmit"],
                             tStamps["originate"],
                             tStamps["compensation"],
                         )
                         s.close()
+                        if options["debug"]:
+                            print "icmp timestamp round trip time was %9.3f mS" % (
+                                travelTime * 1000
+                            )
                         break
             elif isAnIPv4_ICMP_DestinationUnreachablePacket(
                 receivedPacket
@@ -853,7 +857,8 @@ def getLocalIP():
 
 def usage():
     print "Usage:\n%s [-cdDhrvwX.X] [targetMachine ..[targetMachineN]]" % sys.argv[0]
-    print " where; -\n   -c or --correction   disable naive half RTT correction to time difference"
+    print " where; -\n   -c or --count   send count timestamp requests with wait separation"
+    print "   -C or --correction   disable naive half RTT correction to time difference"
     print "   -d or --dgram    selects SOCK_DGRAM socket instead of SOCK_RAW socket"
     print "   -D or --debug    prints out Debug information"
     print "   -h or --help     outputs this usage message"
@@ -871,8 +876,9 @@ def processCommandLine():
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "cdDhmrsvw:",
+            "c:CdDhmrsvw:",
             [
+                "count",
                 "correction",
                 "dgram",
                 "debug",
@@ -888,7 +894,11 @@ def processCommandLine():
         usage()
         sys.exit()
     for o, a in opts:
-        if o in ("-c", "--correction"):
+        if o in ("-c", "--count"):
+            options["count"] = int(a)
+            if options["count"] < 1:
+                options["count"] = 1
+        elif o in ("-C", "--correction"):
             options["correction"] = True
         elif o in ("-d", "--dgram"):
             options["dgram"] = True
@@ -910,6 +920,7 @@ def processCommandLine():
                 options["wait"] = 0.0
     if options["debug"]:
         options["verbose"] = True  # Debug implies verbose output
+        print "Count is set to", options["count"]
         print "Time out wait period is ", options["wait"], "secs"
     if options["standard"] and options["reverse"]:
         options["reverse"] = False  # standard option mutually exclusive of reverse
@@ -932,24 +943,33 @@ def pingAndPrintTimeStamp(trgtAddr, startTime):
             # If the verbose flag was specified then this print is superfluous
             if not options["verbose"]:
                 printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
-                print "ping failed"
-        # Get Timestamp from the specified computer
-        successful, timeStamps = pingWithICMP_TIMESTAMP_REQUEST_Packet(
-            trgtAddr, trgtIP_Addr, options
-        )
-        if successful:
-            print '"%s" (%s)' % (trgtAddr, trgtIP_Addr),
-            informUserAboutTimestamp("Transmit", timeStamps["transmit"])
-            print '"%s"' % trgtAddr,
-            printTimeStampAsHrsMinSecsSinceMidnight(timeStamps["transmit"])
-            print "-",
-            printTimeStampAsHrsMinSecsSinceMidnight(timeStamps["originate"])
-            print "-> estimated difference: %ld mS" % (timeStamps["difference"],)
-        else:
-            # If the verbose flag was specified then this print is superfluous
-            if not options["verbose"]:
-                printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
-                print "timestamp acquisition failed"
+                print "ping failed (elapsed time %6.3f sec)" % (
+                    getClockTime() - startTime
+                )
+        # Get Timestamp from the specified computer count times with delay between attempts
+        for cnt in range(options["count"]):
+            successful, timeStamps = pingWithICMP_TIMESTAMP_REQUEST_Packet(
+                trgtAddr, trgtIP_Addr, options
+            )
+            if successful:
+                print '"%s" (%s)' % (trgtAddr, trgtIP_Addr),
+                informUserAboutTimestamp("Transmit", timeStamps["transmit"])
+                print '"%s"' % trgtAddr,
+                printTimeStampAsHrsMinSecsSinceMidnight(timeStamps["transmit"])
+                print "-",
+                printTimeStampAsHrsMinSecsSinceMidnight(timeStamps["originate"])
+                if options["correction"]:
+                    print "-> difference: %ld mS" % (timeStamps["difference"],)
+                else:
+                    print "- %ld" % (timeStamps["compensation"]),
+                    print "-> est'd difference: %ld mS" % (timeStamps["difference"],)
+            else:
+                # If the verbose flag was specified then this print is superfluous
+                if not options["verbose"]:
+                    printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
+                    print "timestamp acquisition failed"
+            if cnt + 1 < options["count"]:
+                _time.sleep(options["wait"])
     except _socket.gaierror, msg:
         print '"%s" Target Name problem: %s' % (trgtAddr, msg)
     except _socket.error, msg:
