@@ -27,13 +27,15 @@ $ sudo ./checktime.py --help
 ?? Please specify the computer to ping?
 
 Usage:
-./checktime.py [-cdDhrvwX.X] [targetMachine ..[targetMachineN]]
+./checktime.py [-cXCdDhmpX.XrvwX.X] [targetMachine ..[targetMachineN]]
  where; -
-   -c or --correction   disable naive half RTT correction to time difference
+   -cX              send count timestamp requests with pause separation
+   -C or --correction   disable naive half RTT correction to time difference
    -d or --dgram    selects SOCK_DGRAM socket instead of SOCK_RAW socket
    -D or --debug    prints out Debug information
    -h or --help     outputs this usage message
    -m or --microsoft  reverses byte order of receive and transmit timestamps (suits MS Windows)
+   -pX.X            pause X.X sec between multiple timestamp requests
    -r or --raw      selects SOCK_RAW but is over-ridden by -d or --dgram
    -v or --verbose  prints verbose output
    -wX.X            wait X.X sec instead of default 2 sec before timing-out
@@ -41,7 +43,8 @@ Usage:
  E.g.; -
     ./checktime.py  -v -w5 127.0.0.1
 
-Defaulting to ping the local interface (10.0.0.2)
-"10.0.0.2" (10.0.0.2) Transmit timestamp returned was 12:48:42.706
-"10.0.0.2" 12:48:42.706 - 12:48:42.706 -> estimated difference: 0 mS
+Defaulting to ping the local interface (10.1.1.2)
+"10.1.1.2" ping failed (elapsed time  0.000 sec)
+"10.1.1.2" timestamp acquisition failed
 ```
+

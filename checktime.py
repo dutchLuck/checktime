@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Tue Dec 31 23:15:15 2019
+# Last Modified on Fri Jan  3 23:18:18 2020
 #
 
 #
@@ -39,12 +39,13 @@ _d_size = struct.calcsize("d")
 options = {
     "count": int(1),
     "correction": False,
-    "dgram": False,
-    "rawSck": False,
     "debug": False,
+    "dgram": False,
     "help": False,
-    "standard": False,
+    "pause": float(1),
+    "rawSck": False,
     "reverse": False,
+    "standard": False,
     "verbose": False,
     "wait": float(2),
 }
@@ -856,13 +857,16 @@ def getLocalIP():
 
 
 def usage():
-    print "Usage:\n%s [-cdDhrvwX.X] [targetMachine ..[targetMachineN]]" % sys.argv[0]
-    print " where; -\n   -c or --count   send count timestamp requests with wait separation"
+    print "Usage:\n%s [-cXCdDhmpX.XrvwX.X] [targetMachine ..[targetMachineN]]" % sys.argv[
+        0
+    ]
+    print " where; -\n   -cX              send count timestamp requests with pause separation"
     print "   -C or --correction   disable naive half RTT correction to time difference"
     print "   -d or --dgram    selects SOCK_DGRAM socket instead of SOCK_RAW socket"
     print "   -D or --debug    prints out Debug information"
     print "   -h or --help     outputs this usage message"
     print "   -m or --microsoft  reverses byte order of receive and transmit timestamps (suits MS Windows)"
+    print "   -pX.X            pause X.X sec between multiple timestamp requests"
     print "   -r or --raw      selects SOCK_RAW but is over-ridden by -d or --dgram"
     print "   -v or --verbose  prints verbose output"
     print "   -wX.X            wait X.X sec instead of default 2 sec before timing-out"
@@ -876,14 +880,15 @@ def processCommandLine():
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "c:CdDhmrsvw:",
+            "c:CdDhmp:rsvw:",
             [
-                "count",
+                "",
                 "correction",
                 "dgram",
                 "debug",
                 "help",
                 "microsoft",
+                "",
                 "raw",
                 "standard",
                 "verbose",
@@ -908,6 +913,10 @@ def processCommandLine():
             options["help"] = True
         elif o in ("-m", "--microsoft"):
             options["reverse"] = True
+        elif o in "-p":
+            options["pause"] = float(a)
+            if options["pause"] < 0.0:
+                options["pause"] = 0.0
         elif o in ("-r", "--raw"):
             options["rawSck"] = True
         elif o in ("-s", "--standard"):
@@ -922,6 +931,7 @@ def processCommandLine():
         options["verbose"] = True  # Debug implies verbose output
         print "Count is set to", options["count"]
         print "Time out wait period is ", options["wait"], "secs"
+        print "Pause between multiple timestamp requests is ", options["pause"], "secs"
     if options["standard"] and options["reverse"]:
         options["reverse"] = False  # standard option mutually exclusive of reverse
     return args
@@ -969,7 +979,7 @@ def pingAndPrintTimeStamp(trgtAddr, startTime):
                     printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
                     print "timestamp acquisition failed"
             if cnt + 1 < options["count"]:
-                _time.sleep(options["wait"])
+                _time.sleep(options["pause"])
     except _socket.gaierror, msg:
         print '"%s" Target Name problem: %s' % (trgtAddr, msg)
     except _socket.error, msg:
