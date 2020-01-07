@@ -94,9 +94,8 @@ def calcChecksum(dataString):
 
 
 # Construct the ICMP header and add it to the ICMP body data
-def constructICMP_Datagram(icmpType, seq, payload):
+def constructICMP_Datagram(icmpType, pid, seq, payload):
     # Header is type (8), code (8), checksum (16), id (16), sequence (16)
-    pid = os.getpid() & 0xFFFF
     headerSansCheckSum = struct.pack("!BBHHH", icmpType, 0, 0, pid, seq)
     chckSum = calcChecksum(headerSansCheckSum + payload)
     header = struct.pack("!BBHHH", icmpType, 0, chckSum, pid, seq)
@@ -104,21 +103,21 @@ def constructICMP_Datagram(icmpType, seq, payload):
 
 
 # Construct an ICMP Echo Request
-def constructICMP_ECHO_REQUEST_Packet(seq, packetsize=56):
+def constructICMP_ECHO_REQUEST_Packet(pid, seq, packetsize=56):
     padding = (packetsize - _d_size) * b"Q"
     timeinfo = struct.pack("!d", getClockTime())
-    return constructICMP_Datagram(ICMP_ECHO_REQUEST, seq, timeinfo + padding)
+    return constructICMP_Datagram(ICMP_ECHO_REQUEST, pid, seq, timeinfo + padding)
 
 
 # Construct an ICMP Time Stamp Request
-def constructICMP_TIMESTAMP_REQUEST_Packet(seq):
+def constructICMP_TIMESTAMP_REQUEST_Packet(pid, seq):
     originateTime = struct.pack(
         "!L", calcTimeSinceUTC_Midnight()
     )  # put timestamp as unsigned long in network order
     receiveTime = struct.pack("!L", 0L)
     transmitTime = struct.pack("!L", 0L)
     return constructICMP_Datagram(
-        ICMP_TIMESTAMP_REQUEST, seq, originateTime + receiveTime + transmitTime
+        ICMP_TIMESTAMP_REQUEST, pid, seq, originateTime + receiveTime + transmitTime
     )
 
 
@@ -592,7 +591,7 @@ def isThisDestinationUnreachableA_ResponseToThePacketWeSent(
     return result
 
 
-def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
+def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns, pid):
     exitLoopFlag = False
     if optns["debug"]:
         print "\n--- Attempting to get ICMP echo (ping) from",
@@ -602,7 +601,7 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns):
         s = socket()
         s.settimeout(optns["wait"])
         # Build an ICMP Echo Request Packet
-        pingPacket = constructICMP_ECHO_REQUEST_Packet(1)
+        pingPacket = constructICMP_ECHO_REQUEST_Packet(pid, 1)
         if optns["debug"]:
             print "\n----------- ICMP Echo Request is; -"
             ICMP_Hdr, ICMP_Payload = parseAndCheckICMP_Data(pingPacket)
@@ -707,7 +706,9 @@ def calculateMostLikelyTimeDifference(
     return tDiff
 
 
-def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
+def pingWithICMP_TIMESTAMP_REQUEST_Packet(
+    address, addr, optns, pid, originateSequenceNumber
+):
     success = False
     tStamps = {
         "originate": 0L,
@@ -724,8 +725,9 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(address, addr, optns):
         s = socket()  # Attempt to open a socket
         s.settimeout(optns["wait"])
         # Build an ICMP Timestamp Request Packet
-        originateSequenceNumber = 1
-        icmpTsReqPckt = constructICMP_TIMESTAMP_REQUEST_Packet(originateSequenceNumber)
+        icmpTsReqPckt = constructICMP_TIMESTAMP_REQUEST_Packet(
+            pid, originateSequenceNumber
+        )
         ICMP_TsReqHdr, ICMP_TsReqPayload = parseAndCheckICMP_Data(icmpTsReqPckt)
         if optns["debug"]:
             print "\n----------- ICMP Timestamp Request is; -"
@@ -937,12 +939,14 @@ def processCommandLine():
     return args
 
 
-def pingAndPrintTimeStamp(trgtAddr, startTime):
+def pingAndPrintTimeStamp(trgtAddr, startTime, pid):
     try:
         # Turn Target Computer name into an IP Address if a name was specified
         trgtIP_Addr = _socket.gethostbyname(trgtAddr)
         # Ping the specified computer
-        travelTime = pingWithICMP_ECHO_REQUEST_Packet(trgtAddr, trgtIP_Addr, options)
+        travelTime = pingWithICMP_ECHO_REQUEST_Packet(
+            trgtAddr, trgtIP_Addr, options, pid
+        )
         if travelTime <= (
             getClockTime() - startTime
         ):  # If Ping fails then the travel time is deliberately set large
@@ -959,7 +963,7 @@ def pingAndPrintTimeStamp(trgtAddr, startTime):
         # Get Timestamp from the specified computer count times with delay between attempts
         for cnt in range(options["count"]):
             successful, timeStamps = pingWithICMP_TIMESTAMP_REQUEST_Packet(
-                trgtAddr, trgtIP_Addr, options
+                trgtAddr, trgtIP_Addr, options, pid, cnt + 1
             )
             if successful:
                 print '"%s" (%s)' % (trgtAddr, trgtIP_Addr),
@@ -988,24 +992,26 @@ def pingAndPrintTimeStamp(trgtAddr, startTime):
 
 def main():
     startTime = getClockTime()
+    process_id = os.getpid() & 0xFFFF
     args = processCommandLine()
     if options["debug"]:
         print "\nCheck the time on one or more networked devices"
         print '"checktime.py" Python script running on system type "%s"' % sys.platform
+        print '"checktime.py" (truncated) process identifier is 0x%04x' % process_id
     if len(args) < 1:
         print "\n?? Please specify the computer to ping?\n"
         usage()
         localInterface = getLocalIP()
         print "\nDefaulting to ping the local interface (%s)" % localInterface
         pingAndPrintTimeStamp(
-            localInterface, getClockTime()
+            localInterface, getClockTime(), process_id
         )  # If there is no target specified then use local Interface IP
     else:
         if options["help"]:
             usage()
     # Step through timestamp targets specified on the command line
     for trgtAddr in args:
-        pingAndPrintTimeStamp(trgtAddr, getClockTime())
+        pingAndPrintTimeStamp(trgtAddr, getClockTime(), process_id)
     if options["debug"]:
         print "\nchecktime.py execution time was: %9.3f mS.\n" % (
             (getClockTime() - startTime) * 1000
