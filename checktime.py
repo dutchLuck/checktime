@@ -41,6 +41,7 @@ options = {
     "correction": False,
     "debug": False,
     "dgram": False,
+    "file" : "",
     "help": False,
     "pause": float(1),
     "rawSck": False,
@@ -866,6 +867,7 @@ def usage():
     print "   -C or --correction   disable naive half RTT correction to time difference"
     print "   -d or --dgram    selects SOCK_DGRAM socket instead of SOCK_RAW socket"
     print "   -D or --debug    prints out Debug information"
+    print "   -fABC.DEF        specify target machines in a text file"
     print "   -h or --help     outputs this usage message"
     print "   -m or --microsoft  reverses byte order of receive and transmit timestamps (suits MS Windows)"
     print "   -pX.X            pause X.X sec between multiple timestamp requests"
@@ -882,12 +884,13 @@ def processCommandLine():
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "c:CdDhmp:rsvw:",
+            "c:CdDf:hmp:rsvw:",
             [
                 "",
                 "correction",
                 "dgram",
                 "debug",
+                "",
                 "help",
                 "microsoft",
                 "",
@@ -911,6 +914,8 @@ def processCommandLine():
             options["dgram"] = True
         elif o in ("-D", "--debug"):
             options["debug"] = True
+        elif o in ("-f", "--file"):
+            options["file"] = a
         elif o in ("-h", "--help"):
             options["help"] = True
         elif o in ("-m", "--microsoft"):
@@ -998,7 +1003,7 @@ def main():
         print "\nCheck the time on one or more networked devices"
         print '"checktime.py" Python script running on system type "%s"' % sys.platform
         print '"checktime.py" (truncated) process identifier is 0x%04x' % process_id
-    if len(args) < 1:
+    if ( len(options["file"]) < 1 ) & ( len(args) < 1 ):
         print "\n?? Please specify the computer to ping?\n"
         usage()
         localInterface = getLocalIP()
@@ -1009,6 +1014,15 @@ def main():
     else:
         if options["help"]:
             usage()
+    #
+    # Step through timestamp targets if specified in a file with the -f option
+    if len(options["file"]) > 0:
+        if options["debug"]:
+            print 'Reading machine names from file named "%s"' % options["file"]
+        with open(options["file"]) as f:
+            for trgtAddr in f:
+                pingAndPrintTimeStamp(trgtAddr.strip(), getClockTime(), process_id)
+    #
     # Step through timestamp targets specified on the command line
     for trgtAddr in args:
         pingAndPrintTimeStamp(trgtAddr, getClockTime(), process_id)
