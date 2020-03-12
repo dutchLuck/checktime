@@ -936,9 +936,6 @@ def processCommandLine():
                 options["wait"] = 0.0
     if options["debug"]:
         options["verbose"] = True  # Debug implies verbose output
-        print "Count is set to", options["count"]
-        print "Time out wait period is ", options["wait"], "secs"
-        print "Pause between multiple timestamp requests is ", options["pause"], "secs"
     if options["standard"] and options["reverse"]:
         options["reverse"] = False  # standard option mutually exclusive of reverse
     return args
@@ -1000,9 +997,15 @@ def main():
     process_id = os.getpid() & 0xFFFF
     args = processCommandLine()
     if options["debug"]:
-        print "\nCheck the time on one or more networked devices"
+        print '\nchecktime.py 0v10, March 2020'
+        print "Check the time on one or more networked devices"
         print '"checktime.py" Python script running on system type "%s"' % sys.platform
         print '"checktime.py" (truncated) process identifier is 0x%04x' % process_id
+    #
+    args = processCommandLine()
+    #
+    # if there are no targets specified on command line and no file then
+    # default to ping the local interface
     if ( len(options["file"]) < 1 ) & ( len(args) < 1 ):
         print "\n?? Please specify the computer to ping?\n"
         usage()
@@ -1015,13 +1018,16 @@ def main():
         if options["help"]:
             usage()
     #
-    # Step through timestamp targets if specified in a file with the -f option
+    # Step through timestamp targets from a file specified with the -f option
     if len(options["file"]) > 0:
         if options["debug"]:
             print 'Reading machine names from file named "%s"' % options["file"]
         with open(options["file"]) as f:
             for trgtAddr in f:
-                pingAndPrintTimeStamp(trgtAddr.strip(), getClockTime(), process_id)
+                if options["debug"]:
+                    print 'Read machine name "%s" from file' % trgtAddr.strip()
+                if (len(trgtAddr.strip()) > 0) & (trgtAddr[0] != '#'):
+                    pingAndPrintTimeStamp(trgtAddr.strip(), getClockTime(), process_id)
     #
     # Step through timestamp targets specified on the command line
     for trgtAddr in args:
