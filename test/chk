@@ -11,7 +11,7 @@ SYS_TYPE=`uname -s`
 #  however Mac OSX does not need sudo
 if [ "$SYS_TYPE" = "Darwin" ]
 then
- PROG_UNDER_TEST=../checktime.py
+ PROG_UNDER_TEST="python ../checktime.py"
 elif [ "$SYS_TYPE" = "Linux" ]
 then
  PROG_UNDER_TEST="sudo ../checktime.py"
