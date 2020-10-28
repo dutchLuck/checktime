@@ -27,6 +27,18 @@ fi
 #
 #
 echo
+echo ----------- House keeping tests: Version Number ----------------
+####
+## Show version number
+$PROG_UNDER_TEST $1 --verbose --no-ping --no-time-stamp localhost
+##
+echo
+echo ----------- House keeping tests: Basic Debug Info ----------------
+####
+## Show Most Basic Debug Info
+$PROG_UNDER_TEST $1 -v --debug -P -T localhost
+##
+echo
 echo ----------- Successful --Ping and Timestamp work-------
 ####
 ## Low (6-7mS) RTT ISP time source
@@ -44,9 +56,6 @@ $PROG_UNDER_TEST $1 clock.he.net
 ## 309-312mS RTT French time source
 $PROG_UNDER_TEST $1 ntp.obspm.fr
 ##
-## 348-364mS RTT Swedish time source
-$PROG_UNDER_TEST $1 time1.stupi.se
-#
 #
 echo
 echo ---------- Successful --Big Endian timestamps returned--------

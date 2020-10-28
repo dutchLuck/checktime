@@ -1,10 +1,10 @@
-#! /usr/bin/python
+#! /usr/bin/python2
 #
 # C H E C K T I M E . P Y
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Fri Jan  3 23:18:18 2020
+# Last Modified on Wed Oct 28 22:40:06 2020
 #
 
 #
@@ -41,12 +41,14 @@ options = {
     "correction": False,
     "debug": False,
     "dgram": False,
-    "file" : "",
+    "file": "",
     "help": False,
     "pause": float(1),
+    "noPing": False,
     "rawSck": False,
     "reverse": False,
     "standard": False,
+    "noTimeStamp": False,
     "verbose": False,
     "wait": float(2),
 }
@@ -89,7 +91,7 @@ def calcChecksum(dataString):
     s = (s >> 16) + (s & 0xFFFF)
     s += s >> 16
     s = ~s
-    if struct.pack("=H", 1) == "\x01\x00":  # handle endianess of architecture
+    if struct.pack("=H", 1) != struct.pack("!H", 1):  # handle endianess of architecture
         s = ((s >> 8) & 0xFF) | s << 8  # swap checksum bytes if little endian
     return s & 0xFFFF
 
@@ -871,7 +873,10 @@ def usage():
     print "   -h or --help     outputs this usage message"
     print "   -m or --microsoft  reverses byte order of receive and transmit timestamps (suits MS Windows)"
     print "   -pX.X            pause X.X sec between multiple timestamp requests"
+    print "   -P or --no-ping  don't send ICMP echo request"
     print "   -r or --raw      selects SOCK_RAW but is over-ridden by -d or --dgram"
+    print "   -s or --standard selects SOCK_DGRAM"
+    print "   -T or --no-time-stamp  don't send ICMP time stamp request"
     print "   -v or --verbose  prints verbose output"
     print "   -wX.X            wait X.X sec instead of default 2 sec before timing-out"
     print "   targetMachine is either the name or IP address of the computer to ping"
@@ -884,7 +889,7 @@ def processCommandLine():
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "c:CdDf:hmp:rsvw:",
+            "c:CdDf:hmp:PrsTvw:",
             [
                 "",
                 "correction",
@@ -894,9 +899,12 @@ def processCommandLine():
                 "help",
                 "microsoft",
                 "",
+                "no-ping",
                 "raw",
                 "standard",
+                "no-time-stamp",
                 "verbose",
+                "",
             ],
         )
     except getopt.GetoptError as err:
@@ -924,10 +932,14 @@ def processCommandLine():
             options["pause"] = float(a)
             if options["pause"] < 0.0:
                 options["pause"] = 0.0
+        elif o in ("-P", "--no-ping"):
+            options["noPing"] = True
         elif o in ("-r", "--raw"):
             options["rawSck"] = True
         elif o in ("-s", "--standard"):
             options["standard"] = True
+        elif o in ("-T", "--no-time-stamp"):
+            options["noTimeStamp"] = True
         elif o in ("-v", "--verbose"):
             options["verbose"] = True
         elif o in "-w":
@@ -945,47 +957,51 @@ def pingAndPrintTimeStamp(trgtAddr, startTime, pid):
     try:
         # Turn Target Computer name into an IP Address if a name was specified
         trgtIP_Addr = _socket.gethostbyname(trgtAddr)
-        # Ping the specified computer
-        travelTime = pingWithICMP_ECHO_REQUEST_Packet(
-            trgtAddr, trgtIP_Addr, options, pid
-        )
-        if travelTime <= (
-            getClockTime() - startTime
-        ):  # If Ping fails then the travel time is deliberately set large
-            if options["verbose"]:
-                printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
-                print "ping round trip time was: %9.3f mS." % (travelTime * 1000)
-        else:
-            # If the verbose flag was specified then this print is superfluous
-            if not options["verbose"]:
-                printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
-                print "ping failed (elapsed time %6.3f sec)" % (
-                    getClockTime() - startTime
-                )
-        # Get Timestamp from the specified computer count times with delay between attempts
-        for cnt in range(options["count"]):
-            successful, timeStamps = pingWithICMP_TIMESTAMP_REQUEST_Packet(
-                trgtAddr, trgtIP_Addr, options, pid, cnt + 1
+        # Ping the specified computer unless noPing option is true
+        if not options["noPing"]:
+            travelTime = pingWithICMP_ECHO_REQUEST_Packet(
+                trgtAddr, trgtIP_Addr, options, pid
             )
-            if successful:
-                print '"%s" (%s)' % (trgtAddr, trgtIP_Addr),
-                informUserAboutTimestamp("Transmit", timeStamps["transmit"])
-                print '"%s"' % trgtAddr,
-                printTimeStampAsHrsMinSecsSinceMidnight(timeStamps["transmit"])
-                print "-",
-                printTimeStampAsHrsMinSecsSinceMidnight(timeStamps["originate"])
-                if options["correction"]:
-                    print "-> difference: %ld mS" % (timeStamps["difference"],)
-                else:
-                    print "- %ld" % (timeStamps["compensation"]),
-                    print "-> est'd difference: %ld mS" % (timeStamps["difference"],)
+            if travelTime <= (
+                getClockTime() - startTime
+            ):  # If Ping fails then the travel time is deliberately set large
+                if options["verbose"]:
+                    printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
+                    print "ping round trip time was: %9.3f mS." % (travelTime * 1000)
             else:
                 # If the verbose flag was specified then this print is superfluous
                 if not options["verbose"]:
                     printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
-                    print "timestamp acquisition failed"
-            if cnt + 1 < options["count"]:
-                _time.sleep(options["pause"])
+                    print "ping failed (elapsed time %6.3f sec)" % (
+                        getClockTime() - startTime
+                    )
+        # Get Timestamp from the specified computer count times with delay between attempts
+        if not options["noTimeStamp"]:
+            for cnt in range(options["count"]):
+                successful, timeStamps = pingWithICMP_TIMESTAMP_REQUEST_Packet(
+                    trgtAddr, trgtIP_Addr, options, pid, cnt + 1
+                )
+                if successful:
+                    print '"%s" (%s)' % (trgtAddr, trgtIP_Addr),
+                    informUserAboutTimestamp("Transmit", timeStamps["transmit"])
+                    print '"%s"' % trgtAddr,
+                    printTimeStampAsHrsMinSecsSinceMidnight(timeStamps["transmit"])
+                    print "-",
+                    printTimeStampAsHrsMinSecsSinceMidnight(timeStamps["originate"])
+                    if options["correction"]:
+                        print "-> difference: %ld mS" % (timeStamps["difference"],)
+                    else:
+                        print "- %ld" % (timeStamps["compensation"]),
+                        print "-> est'd difference: %ld mS" % (
+                            timeStamps["difference"],
+                        )
+                else:
+                    # If the verbose flag was specified then this print is superfluous
+                    if not options["verbose"]:
+                        printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
+                        print "timestamp acquisition failed"
+                if cnt + 1 < options["count"]:
+                    _time.sleep(options["pause"])
     except _socket.gaierror, msg:
         print '"%s" Target Name problem: %s' % (trgtAddr, msg)
     except _socket.error, msg:
@@ -997,16 +1013,29 @@ def main():
     process_id = os.getpid() & 0xFFFF
     args = processCommandLine()
     if options["debug"]:
-        print '\nchecktime.py 0v10, March 2020'
-        print "Check the time on one or more networked devices"
-        print '"checktime.py" Python script running on system type "%s"' % sys.platform
-        print '"checktime.py" (truncated) process identifier is 0x%04x' % process_id
+        print
+    if options["debug"] or options["verbose"]:
+        print "checktime.py 0v11, Oct 2020"
+    if options["debug"]:
+        print "\nCheck the time on one or more networked devices"
+        print '\n"%s" Python script running on system type "%s"' % (
+            sys.argv[0],
+            sys.platform,
+        )
+        print '\nArgument List "%s"\nbeing executed by Python version "%s"' % (
+            sys.argv,
+            sys.version,
+        )
+        print '\n"%s" (truncated) process identifier is 0x%04x' % (
+            sys.argv[0],
+            process_id,
+        )
     #
     args = processCommandLine()
     #
     # if there are no targets specified on command line and no file then
     # default to ping the local interface
-    if ( len(options["file"]) < 1 ) & ( len(args) < 1 ):
+    if (len(options["file"]) < 1) & (len(args) < 1):
         print "\n?? Please specify the computer to ping?\n"
         usage()
         localInterface = getLocalIP()
@@ -1026,16 +1055,20 @@ def main():
             for trgtAddr in f:
                 if options["debug"]:
                     print 'Read machine name "%s" from file' % trgtAddr.strip()
-                if (len(trgtAddr.strip()) > 0) & (trgtAddr[0] != '#'):
+                if (len(trgtAddr.strip()) > 0) & (trgtAddr[0] != "#"):
                     pingAndPrintTimeStamp(trgtAddr.strip(), getClockTime(), process_id)
     #
     # Step through timestamp targets specified on the command line
     for trgtAddr in args:
         pingAndPrintTimeStamp(trgtAddr, getClockTime(), process_id)
     if options["debug"]:
-        print "\nchecktime.py execution time was: %9.3f mS.\n" % (
+        print
+    if options["debug"] or options["verbose"]:
+        print "checktime.py execution time was: %9.3f mS." % (
             (getClockTime() - startTime) * 1000
         )
+    if options["debug"]:
+        print
 
 
 if __name__ == "__main__":
