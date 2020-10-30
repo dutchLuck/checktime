@@ -87,8 +87,6 @@ echo ---------- Mostly unsuccessful --Destination Unreachable------
 ## Ping succeeds but timestamp gets a destination unreachable reply
 $PROG_UNDER_TEST $1 time.iinet.com.au
 ##
-## Both Ping and timestamp get a destination unreachable reply
-$PROG_UNDER_TEST $1 www.openbsd.org
 #
 #
 echo

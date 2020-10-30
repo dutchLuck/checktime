@@ -68,7 +68,7 @@ def calcTimeSinceUTC_Midnight():
     utcnow = datetime.utcnow()
     midnightUTC = datetime.combine(utcnow.date(), time(0))
     delta = utcnow - midnightUTC
-    millisecondsSinceMidnight = delta.seconds * 1000 + delta.microseconds / 1000
+    millisecondsSinceMidnight = int(delta.seconds * 1000.0 + delta.microseconds / 1000.0)
     return millisecondsSinceMidnight
 
 
