@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Wed Oct 28 22:40:06 2020
+# Last Modified on Wed Dec 23 00:03:56 2020
 #
 
 #
@@ -70,7 +70,9 @@ def calcTimeSinceUTC_Midnight():
     utcnow = datetime.utcnow()
     midnightUTC = datetime.combine(utcnow.date(), time(0))
     delta = utcnow - midnightUTC
-    millisecondsSinceMidnight = int(delta.seconds * 1000.0 + delta.microseconds / 1000.0)
+    millisecondsSinceMidnight = int(
+        delta.seconds * 1000.0 + delta.microseconds / 1000.0
+    )
     return millisecondsSinceMidnight
 
 
@@ -334,7 +336,7 @@ def printTimeStampAsHrsMinSecsSinceMidnight(timeStamp):
     if timeStamp == 0:
         print "00:00:00.000",
     elif timeStamp < 0:
-        timeStamp = abs( timeStamp )
+        timeStamp = abs(timeStamp)
         tsTm = convertMillisecondsSinceMidnight(abs(timeStamp))
         print "-%02ld:%02ld:%02ld.%03ld" % (
             tsTm["hours"],
@@ -921,7 +923,6 @@ def processCommandLine():
                 "help",
                 "hours",
                 "microsoft",
-                "milliseconds",
                 "",
                 "no-ping",
                 "raw",
@@ -1017,7 +1018,8 @@ def pingAndPrintTimeStamp(trgtAddr, startTime, pid):
                     if options["correction"]:
                         print "-> difference: ",
                     else:
-                        print "- %ld" % (timeStamps["compensation"]),
+                        print "-",
+                        printTimeStampAccordingToOptions(timeStamps["compensation"])
                         print "-> est'd difference: ",
                     printTimeStampAccordingToOptions(timeStamps["difference"])
                     if not options["hours"]:
