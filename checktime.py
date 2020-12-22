@@ -43,6 +43,8 @@ options = {
     "dgram": False,
     "file": "",
     "help": False,
+    "hours": False,
+    "mS": False,
     "pause": float(1),
     "noPing": False,
     "rawSck": False,
@@ -329,13 +331,32 @@ def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
 
 
 def printTimeStampAsHrsMinSecsSinceMidnight(timeStamp):
-    tsTm = convertMillisecondsSinceMidnight(timeStamp)
-    print "%02ld:%02ld:%02ld.%03ld" % (
-        tsTm["hours"],
-        tsTm["minutes"],
-        tsTm["seconds"],
-        tsTm["milliSeconds"],
-    ),
+    if timeStamp == 0:
+        print "00:00:00.000",
+    elif timeStamp < 0:
+        timeStamp = abs( timeStamp )
+        tsTm = convertMillisecondsSinceMidnight(abs(timeStamp))
+        print "-%02ld:%02ld:%02ld.%03ld" % (
+            tsTm["hours"],
+            tsTm["minutes"],
+            tsTm["seconds"],
+            tsTm["milliSeconds"],
+        ),
+    else:
+        tsTm = convertMillisecondsSinceMidnight(timeStamp)
+        print "%02ld:%02ld:%02ld.%03ld" % (
+            tsTm["hours"],
+            tsTm["minutes"],
+            tsTm["seconds"],
+            tsTm["milliSeconds"],
+        ),
+
+
+def printTimeStampAccordingToOptions(timeStamp):
+    if options["hours"]:
+        printTimeStampAsHrsMinSecsSinceMidnight(timeStamp)
+    else:
+        print "%ld" % (timeStamp),
 
 
 def informUserAboutTimestamp(msg, timeStamp):
@@ -871,6 +892,7 @@ def usage():
     print "   -D or --debug    prints out Debug information"
     print "   -fABC.DEF        specify target machines in a text file"
     print "   -h or --help     outputs this usage message"
+    print "   -H or --hours    outputs time on HH:MM:SS.SSS format"
     print "   -m or --microsoft  reverses byte order of receive and transmit timestamps (suits MS Windows)"
     print "   -pX.X            pause X.X sec between multiple timestamp requests"
     print "   -P or --no-ping  don't send ICMP echo request"
@@ -889,7 +911,7 @@ def processCommandLine():
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "c:CdDf:hmp:PrsTvw:",
+            "c:CdDf:hHmp:PrsTvw:",
             [
                 "",
                 "correction",
@@ -897,7 +919,9 @@ def processCommandLine():
                 "debug",
                 "",
                 "help",
+                "hours",
                 "microsoft",
+                "milliseconds",
                 "",
                 "no-ping",
                 "raw",
@@ -926,6 +950,8 @@ def processCommandLine():
             options["file"] = a
         elif o in ("-h", "--help"):
             options["help"] = True
+        elif o in ("-H", "--hours"):
+            options["hours"] = True
         elif o in ("-m", "--microsoft"):
             options["reverse"] = True
         elif o in "-p":
@@ -985,16 +1011,18 @@ def pingAndPrintTimeStamp(trgtAddr, startTime, pid):
                     print '"%s" (%s)' % (trgtAddr, trgtIP_Addr),
                     informUserAboutTimestamp("Transmit", timeStamps["transmit"])
                     print '"%s"' % trgtAddr,
-                    printTimeStampAsHrsMinSecsSinceMidnight(timeStamps["transmit"])
+                    printTimeStampAccordingToOptions(timeStamps["transmit"])
                     print "-",
-                    printTimeStampAsHrsMinSecsSinceMidnight(timeStamps["originate"])
+                    printTimeStampAccordingToOptions(timeStamps["originate"])
                     if options["correction"]:
-                        print "-> difference: %ld mS" % (timeStamps["difference"],)
+                        print "-> difference: ",
                     else:
                         print "- %ld" % (timeStamps["compensation"]),
-                        print "-> est'd difference: %ld mS" % (
-                            timeStamps["difference"],
-                        )
+                        print "-> est'd difference: ",
+                    printTimeStampAccordingToOptions(timeStamps["difference"])
+                    if not options["hours"]:
+                        print "mS",
+                    print
                 else:
                     # If the verbose flag was specified then this print is superfluous
                     if not options["verbose"]:
@@ -1015,7 +1043,7 @@ def main():
     if options["debug"]:
         print
     if options["debug"] or options["verbose"]:
-        print "checktime.py 0v11, Oct 2020"
+        print "checktime.py 0v12, Dec 2020"
     if options["debug"]:
         print "\nCheck the time on one or more networked devices"
         print '\n"%s" Python script running on system type "%s"' % (
