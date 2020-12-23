@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Wed Dec 23 00:03:56 2020
+# Last Modified on Wed Dec 23 19:15:23 2020
 #
 
 #
@@ -885,7 +885,7 @@ def getLocalIP():
 
 
 def usage():
-    print "Usage:\n%s [-cXCdDhmpX.XrvwX.X] [targetMachine ..[targetMachineN]]" % sys.argv[
+    print "Usage:\n%s [-cXCdDfA.ZhHmpX.XrsTvwX.X] [targetMachine ..[targetMachineN]]" % sys.argv[
         0
     ]
     print " where; -\n   -cX              send count timestamp requests with pause separation"
@@ -1045,7 +1045,7 @@ def main():
     if options["debug"]:
         print
     if options["debug"] or options["verbose"]:
-        print "checktime.py 0v12, Dec 2020"
+        print "checktime.py 0v13, Dec 2020"
     if options["debug"]:
         print "\nCheck the time on one or more networked devices"
         print '\n"%s" Python script running on system type "%s"' % (
@@ -1066,13 +1066,15 @@ def main():
     # if there are no targets specified on command line and no file then
     # default to ping the local interface
     if (len(options["file"]) < 1) & (len(args) < 1):
-        print "\n?? Please specify the computer to ping?\n"
+        if not options["help"]:
+            print "\n?? Please specify the computer to ping?\n"
         usage()
-        localInterface = getLocalIP()
-        print "\nDefaulting to ping the local interface (%s)" % localInterface
-        pingAndPrintTimeStamp(
-            localInterface, getClockTime(), process_id
-        )  # If there is no target specified then use local Interface IP
+        if not options["help"]:
+            localInterface = getLocalIP()
+            print "\nDefaulting to ping the local interface (%s)" % localInterface
+            pingAndPrintTimeStamp(
+                localInterface, getClockTime(), process_id
+            )  # If there is no target specified then use local Interface IP
     else:
         if options["help"]:
             usage()
