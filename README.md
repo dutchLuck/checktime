@@ -48,7 +48,11 @@ Usage:
  E.g.; -
     ./checktime.py  -v -w5 127.0.0.1
 ```
-The same ICMP based timing information can be obtained with greater accuracy in (at least) Ubuntu 18.04 LTS
-Linux by installing the  clockdiff  program.
+The same ICMP based time difference information can be obtained with greater confidence in (at least) Ubuntu
+18.04/20.04 LTS Linux by installing the  clockdiff  program.
 
-
+```
+xx@yy:~$ clockdiff www.python.org
+Command 'clockdiff' not found, but can be installed with:
+sudo apt install iputils-clockdiff
+```
