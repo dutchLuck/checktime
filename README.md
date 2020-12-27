@@ -1,7 +1,10 @@
 # checktime.py
-Check the time on another networked computer or network device, by sending an IPv4 ICMP timestamp request.
-This request expects to trigger an ICMP timestamp reply of the number of milliseconds since midnight.
-If the other network device is more than 24 hours different, checktime.py cannot detect this error.
+Check the time on another networked computer or network device, by sending an IPv4 ICMP timestamp request
+(Please see RFC 792 pages 16 & 17 for ICMP timestamp documentation (https://tools.ietf.org/html/rfc792)).
+This timestamp request expects to trigger an ICMP timestamp reply from the remote device. The expected
+reply contains the number of milliseconds since midnight on the remote device at the time the request
+arrived. Consequently if the remote device happens to be more than 24 hours different, any program using
+ICMP timestamp, including checktime.py, cannot detect this, so the answer given will by mod 24 hours.
 Initially checktime.py pings (IPv4 ICMP Echo Request) the specified computer or network device and then
 waits for an ICMP Echo Reply. If it does not receive an echo reply within 2 seconds it prints a "failed"
 message. No message is printed on success, unless --verbose option is used when the program is run. After
@@ -67,3 +70,4 @@ host=dualstack.python.map.fastly.net rtt=8(0)ms/8ms delta=0ms/0ms Sun Dec 27 19:
 Sun 27 Dec 19:24:49 AEDT 2020
 ```
 
+https://tools.ietf.org/html/rfc792
