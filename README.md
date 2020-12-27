@@ -49,10 +49,21 @@ Usage:
     ./checktime.py  -v -w5 127.0.0.1
 ```
 The same ICMP based time difference information can be obtained with greater confidence in (at least) Ubuntu
-18.04/20.04 LTS Linux by installing the  clockdiff  program.
+18.04/20.04 LTS Linux by installing the  clockdiff  program. For example; -
 
 ```
 xx@yy:~$ clockdiff www.python.org
 Command 'clockdiff' not found, but can be installed with:
 sudo apt install iputils-clockdiff
+xx@yy:~$ sudo apt install iputils-clockdiff
+..<apt install output text removed>..
+xx@yy:~$ date; sudo ./checktime.py www.python.org; date; clockdiff www.python.org; date
+Sun 27 Dec 19:24:42 AEDT 2020
+www.python.org (151.101.80.223) Transmit timestamp returned was 08:24:42.666
+www.python.org 30282666 - 30282662 - 4 -> est'd difference:  0 mS
+Sun 27 Dec 19:24:42 AEDT 2020
+..................................................
+host=dualstack.python.map.fastly.net rtt=8(0)ms/8ms delta=0ms/0ms Sun Dec 27 19:24:49 2020
+Sun 27 Dec 19:24:49 AEDT 2020
 ```
+
