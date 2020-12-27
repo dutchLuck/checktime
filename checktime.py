@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Wed Dec 23 19:15:23 2020
+# Last Modified on Sun Dec 27 23:39:38 2020
 #
 
 #
@@ -44,7 +44,7 @@ options = {
     "file": "",
     "help": False,
     "hours": False,
-    "mS": False,
+    "mSecs": False,
     "pause": float(1),
     "noPing": False,
     "rawSck": False,
@@ -354,11 +354,60 @@ def printTimeStampAsHrsMinSecsSinceMidnight(timeStamp):
         ),
 
 
+def printTimeStampAsMilliSeconds(timeStamp):
+    print "%ld" % timeStamp,
+
+
 def printTimeStampAccordingToOptions(timeStamp):
     if options["hours"]:
         printTimeStampAsHrsMinSecsSinceMidnight(timeStamp)
+    elif options["mSecs"]:
+        printTimeStampAsMilliSeconds(timeStamp)
     else:
-        print "%ld" % (timeStamp),
+        testValue = timeStamp / 1000.0
+        if abs(testValue) < 1.0:
+            print "%ld" % timeStamp,
+        elif abs(testValue) < 60.0:
+            print "%7.3lf" % testValue,
+        else:
+            testValue = timeStamp / 60000.0
+            if abs(testValue) < 60.0:
+                print "%7.3lf" % testValue,
+            else:
+                testValue = timeStamp / 3600000.0
+                if abs(testValue) < 24.0:
+                    print "%7.3lf" % testValue,
+                else:
+                    printTimeStampAsMilliSeconds(timeStamp)
+
+
+def printTimeStampUnitsAccordingToOptions(timeStamp):
+    if options["hours"]:
+        print "[HH:MM:SS.SSS]",
+    elif options["mSecs"]:
+        print "[mS]",
+    else:
+        testValue = timeStamp / 1000.0
+        if abs(testValue) < 1.0:
+            print "[mS]",
+        elif abs(testValue) < 60.0:
+            print "[S]",
+        else:
+            testValue = timeStamp / 60000.0
+            if abs(testValue) < 60.0:
+                print "[mins]",
+            else:
+                testValue = timeStamp / 3600000.0
+                if abs(testValue) < 24.0:
+                    print "[hrs]",
+                else:
+                    print "[mS]",
+
+
+def printTimeStampValueAndUnitsAccordingToOptions(timeStamp):
+    printTimeStampAccordingToOptions(timeStamp)
+    if not options["hours"]:
+        printTimeStampUnitsAccordingToOptions(timeStamp)
 
 
 def informUserAboutTimestamp(msg, timeStamp):
@@ -894,8 +943,9 @@ def usage():
     print "   -D or --debug    prints out Debug information"
     print "   -fABC.DEF        specify target machines in a text file"
     print "   -h or --help     outputs this usage message"
-    print "   -H or --hours    outputs time on HH:MM:SS.SSS format"
-    print "   -m or --microsoft  reverses byte order of receive and transmit timestamps (suits MS Windows)"
+    print "   -H or --hours    sets output format to HH:MM:SS.SSS"
+    print "   -m or --microsoft  reverses byte order of timestamp reply (suits remote MS Windows)"
+    print "   -M or --milliseconds  sets output format to milliseconds"
     print "   -pX.X            pause X.X sec between multiple timestamp requests"
     print "   -P or --no-ping  don't send ICMP echo request"
     print "   -r or --raw      selects SOCK_RAW but is over-ridden by -d or --dgram"
@@ -913,7 +963,7 @@ def processCommandLine():
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "c:CdDf:hHmp:PrsTvw:",
+            "c:CdDf:hHmMp:PrsTvw:",
             [
                 "",
                 "correction",
@@ -923,6 +973,7 @@ def processCommandLine():
                 "help",
                 "hours",
                 "microsoft",
+                "milliseconds",
                 "",
                 "no-ping",
                 "raw",
@@ -955,6 +1006,8 @@ def processCommandLine():
             options["hours"] = True
         elif o in ("-m", "--microsoft"):
             options["reverse"] = True
+        elif o in ("-M", "--milliseconds"):
+            options["mSecs"] = True
         elif o in "-p":
             options["pause"] = float(a)
             if options["pause"] < 0.0:
@@ -977,6 +1030,8 @@ def processCommandLine():
         options["verbose"] = True  # Debug implies verbose output
     if options["standard"] and options["reverse"]:
         options["reverse"] = False  # standard option mutually exclusive of reverse
+    if options["hours"] and options["mSecs"]:
+        options["mSecs"] = False  # hours option mutually exclusive of milliseconds
     return args
 
 
@@ -1012,18 +1067,17 @@ def pingAndPrintTimeStamp(trgtAddr, startTime, pid):
                     print '"%s" (%s)' % (trgtAddr, trgtIP_Addr),
                     informUserAboutTimestamp("Transmit", timeStamps["transmit"])
                     print '"%s"' % trgtAddr,
-                    printTimeStampAccordingToOptions(timeStamps["transmit"])
+                    printTimeStampValueAndUnitsAccordingToOptions(timeStamps["transmit"])
                     print "-",
-                    printTimeStampAccordingToOptions(timeStamps["originate"])
+                    printTimeStampValueAndUnitsAccordingToOptions(timeStamps["originate"])
                     if options["correction"]:
                         print "-> difference: ",
                     else:
                         print "-",
-                        printTimeStampAccordingToOptions(timeStamps["compensation"])
+                        printTimeStampValueAndUnitsAccordingToOptions(timeStamps["compensation"])
                         print "-> est'd difference: ",
                     printTimeStampAccordingToOptions(timeStamps["difference"])
-                    if not options["hours"]:
-                        print "mS",
+                    printTimeStampUnitsAccordingToOptions(timeStamps["difference"])
                     print
                 else:
                     # If the verbose flag was specified then this print is superfluous
@@ -1045,7 +1099,7 @@ def main():
     if options["debug"]:
         print
     if options["debug"] or options["verbose"]:
-        print "checktime.py 0v13, Dec 2020"
+        print "checktime.py 0v14, Dec 2020"
     if options["debug"]:
         print "\nCheck the time on one or more networked devices"
         print '\n"%s" Python script running on system type "%s"' % (
