@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Sun Dec 27 23:39:38 2020
+# Last Modified on Mon Dec 28 14:43:36 2020
 #
 
 #
@@ -358,6 +358,20 @@ def printTimeStampAsMilliSeconds(timeStamp):
     print "%ld" % timeStamp,
 
 
+def printTimeStampAsHrsMinSecsUnlessMillisecsOptionIsInvoked(timeStamp):
+    if options["mSecs"]:
+        printTimeStampAsMilliSeconds(timeStamp)
+    else:
+        printTimeStampAsHrsMinSecsSinceMidnight(timeStamp)
+
+
+def printTimeStampAsMilliSecondsUnlessHoursOptionIsInvoked(timeStamp):
+    if options["hours"]:
+        printTimeStampAsHrsMinSecsSinceMidnight(timeStamp)
+    else:
+        printTimeStampAsMilliSeconds(timeStamp)
+
+
 def printTimeStampAccordingToOptions(timeStamp):
     if options["hours"]:
         printTimeStampAsHrsMinSecsSinceMidnight(timeStamp)
@@ -411,7 +425,7 @@ def printTimeStampValueAndUnitsAccordingToOptions(timeStamp):
 
 
 def informUserAboutTimestamp(msg, timeStamp):
-    print msg, "timestamp returned was",
+    print msg, "timestamp:",
     printTimeStampAsHrsMinSecsSinceMidnight(timeStamp)
     if options["verbose"]:
         print "(%ld (0x%08x) mS since midnight UTC)" % (timeStamp, timeStamp)
@@ -524,7 +538,7 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
             )  # try removing non-standard bit
         if (
             tmStmps["transmit"] > 86400000
-        ):  # 86400000 mS is a normal day but could be in too low on special days when leap seconds are added
+        ):  # 86400000 mS is a normal day but could be too low on special days when leap seconds are added
             informUserAboutTimestampProblem(
                 "timestamp returned is greater than the maximum mS in day", tmStmps
             )
@@ -1064,17 +1078,29 @@ def pingAndPrintTimeStamp(trgtAddr, startTime, pid):
                     trgtAddr, trgtIP_Addr, options, pid, cnt + 1
                 )
                 if successful:
-                    print '"%s" (%s)' % (trgtAddr, trgtIP_Addr),
-                    informUserAboutTimestamp("Transmit", timeStamps["transmit"])
+                    print '"%s" (%s) returned Transmit timestamp' % (
+                        trgtAddr,
+                        trgtIP_Addr,
+                    ),
+                    printTimeStampAsHrsMinSecsUnlessMillisecsOptionIsInvoked(
+                        timeStamps["transmit"]
+                    )
+                    print
                     print '"%s"' % trgtAddr,
-                    printTimeStampValueAndUnitsAccordingToOptions(timeStamps["transmit"])
+                    printTimeStampAsMilliSecondsUnlessHoursOptionIsInvoked(
+                        timeStamps["transmit"]
+                    )
                     print "-",
-                    printTimeStampValueAndUnitsAccordingToOptions(timeStamps["originate"])
+                    printTimeStampAsMilliSecondsUnlessHoursOptionIsInvoked(
+                        timeStamps["originate"]
+                    )
                     if options["correction"]:
                         print "-> difference: ",
                     else:
                         print "-",
-                        printTimeStampValueAndUnitsAccordingToOptions(timeStamps["compensation"])
+                        printTimeStampAsMilliSecondsUnlessHoursOptionIsInvoked(
+                            timeStamps["compensation"]
+                        )
                         print "-> est'd difference: ",
                     printTimeStampAccordingToOptions(timeStamps["difference"])
                     printTimeStampUnitsAccordingToOptions(timeStamps["difference"])
@@ -1099,7 +1125,7 @@ def main():
     if options["debug"]:
         print
     if options["debug"] or options["verbose"]:
-        print "checktime.py 0v14, Dec 2020"
+        print "checktime.py 0v15, Dec 2020"
     if options["debug"]:
         print "\nCheck the time on one or more networked devices"
         print '\n"%s" Python script running on system type "%s"' % (
