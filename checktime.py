@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Mon Dec 28 14:43:36 2020
+# Last Modified on Mon Dec 28 23:09:04 2020
 #
 
 #
@@ -784,23 +784,6 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns, pid):
         return 9.999999
 
 
-def calculateMostLikelyTimeDifference(
-    remote_ms_sinceMidnight, local_ms_sinceMidnight, compensation, debugFlag
-):
-    tDiff = remote_ms_sinceMidnight - local_ms_sinceMidnight - compensation
-    #    if debugFlag:
-    print "\nCalculated initial time difference is: " % (tDiff)
-    if abs(tDiff) > 43200000L:
-        if remote_ms_sinceMidnight < 43200000L:
-            tDiff += 86400000L
-        else:
-            tDiff -= 86400000L
-    #    if debugFlag:
-    print "\nCalculated final time difference is: " % (tDiff)
-    sys.stdout.flush()
-    return tDiff
-
-
 def pingWithICMP_TIMESTAMP_REQUEST_Packet(
     address, addr, optns, pid, originateSequenceNumber
 ):
@@ -887,25 +870,29 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(
                             # Calculate time difference using naive correction of half the Round Trip Time in mS
                             tStamps["compensation"] = long(500.0 * travelTime)
                         if optns["debug"]:
-                            print "Travel Time was %lf [S] and Compensation to be applied is: %ld [mS]" % (
+                            print "ICMP Travel Time was %lf [S] and Compensation to be applied is: %ld [mS]" % (
                                 travelTime,
                                 tStamps["compensation"],
                             )
-                        tStamps["difference"] = calculateMostLikelyTimeDifference(
-                            tStamps["transmit"],
-                            tStamps["originate"],
-                            tStamps["compensation"],
-                            optns["debug"],
+                        tStamps["difference"] = (
+                            tStamps["transmit"]
+                            - tStamps["originate"]
+                            - tStamps["compensation"]
                         )
                         if optns["debug"]:
-                            print "Most likely Difference is: %ld" % tStamps[
-                                "difference"
-                            ]
-                        s.close()
-                        if optns["debug"]:
-                            print "icmp timestamp round trip time was %9.3f mS" % (
-                                travelTime * 1000
+                            print "Calculated initial time difference is: %ld" % (
+                                tStamps["difference"]
                             )
+                        if abs(tStamps["difference"]) > 43200000L:
+                            if tStamps["transmit"] < 43200000L:
+                                tStamps["difference"] += 86400000L
+                            else:
+                                tStamps["difference"] -= 86400000L
+                        if optns["debug"]:
+                            print "Calculated most likely difference is: %ld" % (
+                                tStamps["difference"]
+                            )
+                        s.close()
                         break
             elif isAnIPv4_ICMP_DestinationUnreachablePacket(
                 receivedPacket
@@ -1149,7 +1136,7 @@ def main():
     if options["debug"]:
         print
     if options["debug"] or options["verbose"]:
-        print "checktime.py 0v16, Dec 2020"
+        print "checktime.py 0v17, Dec 2020"
     if options["debug"]:
         print "\nCheck the time on one or more networked devices"
         print '\n"%s" Python script running on system type "%s"' % (
