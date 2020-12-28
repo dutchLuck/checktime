@@ -19,7 +19,7 @@ from datetime import datetime, time
 import struct
 import array  # required in calcChecksum()
 import os  # getpid()
-import sys  # exit()
+import sys  # exit() sys.stdout.flush()
 import getopt  # getopt()
 
 # RFC 792 (ICMP) Message types
@@ -47,6 +47,7 @@ options = {
     "mSecs": False,
     "pause": float(1),
     "noPing": False,
+    "quiet": False,
     "rawSck": False,
     "reverse": False,
     "standard": False,
@@ -784,14 +785,19 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns, pid):
 
 
 def calculateMostLikelyTimeDifference(
-    remote_ms_sinceMidnight, local_ms_sinceMidnight, compensation
+    remote_ms_sinceMidnight, local_ms_sinceMidnight, compensation, debugFlag
 ):
     tDiff = remote_ms_sinceMidnight - local_ms_sinceMidnight - compensation
+    #    if debugFlag:
+    print "\nCalculated initial time difference is: " % (tDiff)
     if abs(tDiff) > 43200000L:
         if remote_ms_sinceMidnight < 43200000L:
             tDiff += 86400000L
         else:
             tDiff -= 86400000L
+    #    if debugFlag:
+    print "\nCalculated final time difference is: " % (tDiff)
+    sys.stdout.flush()
     return tDiff
 
 
@@ -880,13 +886,23 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(
                         else:
                             # Calculate time difference using naive correction of half the Round Trip Time in mS
                             tStamps["compensation"] = long(500.0 * travelTime)
+                        if optns["debug"]:
+                            print "Travel Time was %lf [S] and Compensation to be applied is: %ld [mS]" % (
+                                travelTime,
+                                tStamps["compensation"],
+                            )
                         tStamps["difference"] = calculateMostLikelyTimeDifference(
                             tStamps["transmit"],
                             tStamps["originate"],
                             tStamps["compensation"],
+                            optns["debug"],
                         )
+                        if optns["debug"]:
+                            print "Most likely Difference is: %ld" % tStamps[
+                                "difference"
+                            ]
                         s.close()
-                        if options["debug"]:
+                        if optns["debug"]:
                             print "icmp timestamp round trip time was %9.3f mS" % (
                                 travelTime * 1000
                             )
@@ -948,7 +964,7 @@ def getLocalIP():
 
 
 def usage():
-    print "Usage:\n%s [-cXCdDfA.ZhHmpX.XrsTvwX.X] [targetMachine ..[targetMachineN]]" % sys.argv[
+    print "Usage:\n%s [-cXCdDfA.ZhHmpX.XqrsTvwX.X] [targetMachine ..[targetMachineN]]" % sys.argv[
         0
     ]
     print " where; -\n   -cX              send count timestamp requests with pause separation"
@@ -962,6 +978,7 @@ def usage():
     print "   -M or --milliseconds  sets output format to milliseconds"
     print "   -pX.X            pause X.X sec between multiple timestamp requests"
     print "   -P or --no-ping  don't send ICMP echo request"
+    print "   -q or --quiet    prints difference output, but nothing else"
     print "   -r or --raw      selects SOCK_RAW but is over-ridden by -d or --dgram"
     print "   -s or --standard selects SOCK_DGRAM"
     print "   -T or --no-time-stamp  don't send ICMP time stamp request"
@@ -977,7 +994,7 @@ def processCommandLine():
     try:
         opts, args = getopt.getopt(
             sys.argv[1:],
-            "c:CdDf:hHmMp:PrsTvw:",
+            "c:CdDf:hHmMp:PqrsTvw:",
             [
                 "",
                 "correction",
@@ -990,6 +1007,7 @@ def processCommandLine():
                 "milliseconds",
                 "",
                 "no-ping",
+                "quiet",
                 "raw",
                 "standard",
                 "no-time-stamp",
@@ -1028,6 +1046,8 @@ def processCommandLine():
                 options["pause"] = 0.0
         elif o in ("-P", "--no-ping"):
             options["noPing"] = True
+        elif o in ("-q", "--quiet"):
+            options["quiet"] = True
         elif o in ("-r", "--raw"):
             options["rawSck"] = True
         elif o in ("-s", "--standard"):
@@ -1046,6 +1066,8 @@ def processCommandLine():
         options["reverse"] = False  # standard option mutually exclusive of reverse
     if options["hours"] and options["mSecs"]:
         options["mSecs"] = False  # hours option mutually exclusive of milliseconds
+    if options["verbose"] and options["quiet"]:
+        options["quiet"] = False  # verbose option mutually exclusive of quiet
     return args
 
 
@@ -1078,30 +1100,32 @@ def pingAndPrintTimeStamp(trgtAddr, startTime, pid):
                     trgtAddr, trgtIP_Addr, options, pid, cnt + 1
                 )
                 if successful:
-                    print '"%s" (%s) returned Transmit timestamp' % (
-                        trgtAddr,
-                        trgtIP_Addr,
-                    ),
-                    printTimeStampAsHrsMinSecsUnlessMillisecsOptionIsInvoked(
-                        timeStamps["transmit"]
-                    )
-                    print
-                    print '"%s"' % trgtAddr,
-                    printTimeStampAsMilliSecondsUnlessHoursOptionIsInvoked(
-                        timeStamps["transmit"]
-                    )
-                    print "-",
-                    printTimeStampAsMilliSecondsUnlessHoursOptionIsInvoked(
-                        timeStamps["originate"]
-                    )
-                    if options["correction"]:
-                        print "-> difference: ",
-                    else:
+                    if not options["quiet"]:
+                        print '"%s" (%s) returned Transmit timestamp' % (
+                            trgtAddr,
+                            trgtIP_Addr,
+                        ),
+                        printTimeStampAsHrsMinSecsUnlessMillisecsOptionIsInvoked(
+                            timeStamps["transmit"]
+                        )
+                        print
+                        print '"%s"' % trgtAddr,
+                        printTimeStampAsMilliSecondsUnlessHoursOptionIsInvoked(
+                            timeStamps["transmit"]
+                        )
                         print "-",
                         printTimeStampAsMilliSecondsUnlessHoursOptionIsInvoked(
-                            timeStamps["compensation"]
+                            timeStamps["originate"]
                         )
-                        print "-> est'd difference: ",
+                        if options["correction"]:
+                            print "-> difference: ",
+                        else:
+                            print "-",
+                            printTimeStampAsMilliSecondsUnlessHoursOptionIsInvoked(
+                                timeStamps["compensation"]
+                            )
+                            print "-> est'd difference: ",
+                    # Always output the difference value, even if --quiet is specified
                     printTimeStampAccordingToOptions(timeStamps["difference"])
                     printTimeStampUnitsAccordingToOptions(timeStamps["difference"])
                     print
@@ -1125,7 +1149,7 @@ def main():
     if options["debug"]:
         print
     if options["debug"] or options["verbose"]:
-        print "checktime.py 0v15, Dec 2020"
+        print "checktime.py 0v16, Dec 2020"
     if options["debug"]:
         print "\nCheck the time on one or more networked devices"
         print '\n"%s" Python script running on system type "%s"' % (
