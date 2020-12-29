@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Tue Dec 29 21:41:11 2020
+# Last Modified on Tue Dec 29 23:16:20 2020
 #
 
 #
@@ -951,7 +951,7 @@ def getLocalIP():
 
 
 def usage():
-    print "Usage:\n%s [-cXCdDfA.ZhHmpX.XqrsTvwX.X] [targetMachine ..[targetMachineN]]" % sys.argv[
+    print "Usage:\n%s [-cXCdDfA.ZhHmMpX.XPqrsTvwX.X] [targetMachine ..[targetMachineN]]" % sys.argv[
         0
     ]
     print " where; -\n   -cX              send count timestamp requests with pause separation"
@@ -965,15 +965,15 @@ def usage():
     print "   -M or --milliseconds  sets output format to milliseconds"
     print "   -pX.X            pause X.X sec between multiple timestamp requests"
     print "   -P or --no-ping  don't send ICMP echo request"
-    print "   -q or --quiet    prints difference output, but nothing else"
+    print "   -q or --quiet    prints difference output value and units, but nothing else"
     print "   -r or --raw      selects SOCK_RAW but is over-ridden by -d or --dgram"
-    print "   -s or --standard selects SOCK_DGRAM"
+    print "   -s or --standard suggests normal byte order of timestamps be used"
     print "   -T or --no-time-stamp  don't send ICMP time stamp request"
     print "   -v or --verbose  prints verbose output"
     print "   -wX.X            wait X.X sec instead of default 2 sec before timing-out"
     print "   targetMachine is either the name or IP address of the computer to ping"
     print " E.g.; -"
-    print "   ", sys.argv[0], " -v -w5 127.0.0.1"
+    print "   ", sys.argv[0], " -v www.python.org"
 
 
 # Get options and arguments from the command line
@@ -1141,7 +1141,7 @@ def main():
     if options["debug"]:
         print
     if options["debug"] or options["verbose"]:
-        print "checktime.py 0v17, Dec 2020"
+        print "checktime.py 0v18, Dec 2020"
     if options["debug"]:
         print "\nCheck the time on one or more networked devices"
         print '\n"%s" Python script running on system type "%s"' % (
