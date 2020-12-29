@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Mon Dec 28 23:09:04 2020
+# Last Modified on Tue Dec 29 21:41:11 2020
 #
 
 #
@@ -19,7 +19,7 @@ from datetime import datetime, time
 import struct
 import array  # required in calcChecksum()
 import os  # getpid()
-import sys  # exit() sys.stdout.flush()
+import sys  # exit()
 import getopt  # getopt()
 
 # RFC 792 (ICMP) Message types
@@ -1005,7 +1005,7 @@ def processCommandLine():
     except getopt.GetoptError as err:
         print str(err)
         usage()
-        sys.exit()
+        sys.exit(1)  # Indicate unsuccessful to shell, if there is one.
     for o, a in opts:
         if o in ("-c", "--count"):
             options["count"] = int(a)
@@ -1059,6 +1059,7 @@ def processCommandLine():
 
 
 def pingAndPrintTimeStamp(trgtAddr, startTime, pid):
+    returnValue = 0  # Initially set return value to a success
     try:
         # Turn Target Computer name into an IP Address if a name was specified
         trgtIP_Addr = _socket.gethostbyname(trgtAddr)
@@ -1117,16 +1118,20 @@ def pingAndPrintTimeStamp(trgtAddr, startTime, pid):
                     printTimeStampUnitsAccordingToOptions(timeStamps["difference"])
                     print
                 else:
+                    returnValue += 1  # set return value to indicate a failure
                     # If the verbose flag was specified then this print is superfluous
                     if not options["verbose"]:
                         printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
                         print "timestamp acquisition failed"
                 if cnt + 1 < options["count"]:
                     _time.sleep(options["pause"])
+        return returnValue
     except _socket.gaierror, msg:
         print '"%s" Target Name problem: %s' % (trgtAddr, msg)
+        return 1
     except _socket.error, msg:
         print '"%s" Target Computer problem: %s' % (trgtAddr, msg)
+        return 1
 
 
 def main():
@@ -1154,6 +1159,8 @@ def main():
     #
     args = processCommandLine()
     #
+    errorCount = 0
+    #
     # if there are no targets specified on command line and no file then
     # default to ping the local interface
     if (len(options["file"]) < 1) & (len(args) < 1):
@@ -1163,7 +1170,7 @@ def main():
         if not options["help"]:
             localInterface = getLocalIP()
             print "\nDefaulting to ping the local interface (%s)" % localInterface
-            pingAndPrintTimeStamp(
+            errorCount = pingAndPrintTimeStamp(
                 localInterface, getClockTime(), process_id
             )  # If there is no target specified then use local Interface IP
     else:
@@ -1179,11 +1186,13 @@ def main():
                 if options["debug"]:
                     print 'Read machine name "%s" from file' % trgtAddr.strip()
                 if (len(trgtAddr.strip()) > 0) & (trgtAddr[0] != "#"):
-                    pingAndPrintTimeStamp(trgtAddr.strip(), getClockTime(), process_id)
+                    errorCount += pingAndPrintTimeStamp(
+                        trgtAddr.strip(), getClockTime(), process_id
+                    )
     #
     # Step through timestamp targets specified on the command line
     for trgtAddr in args:
-        pingAndPrintTimeStamp(trgtAddr, getClockTime(), process_id)
+        errorCount += pingAndPrintTimeStamp(trgtAddr, getClockTime(), process_id)
     if options["debug"]:
         print
     if options["debug"] or options["verbose"]:
@@ -1192,6 +1201,9 @@ def main():
         )
     if options["debug"]:
         print
+    sys.exit(
+        errorCount
+    )  # Indicate success or number of failures to shell, if there is one.
 
 
 if __name__ == "__main__":

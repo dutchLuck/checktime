@@ -2,7 +2,7 @@
 #
 # C H K
 #
-# Last modified on Sat Oct 12 19:56:59 2019 
+# Last modified on Tue Dec 29 21:40:58 2020 
 #
 #
 SYS_TYPE=`uname -s`
@@ -31,89 +31,171 @@ echo ----------- House keeping tests: Version Number ----------------
 ####
 ## Show version number
 $PROG_UNDER_TEST $1 --verbose --no-ping --no-time-stamp localhost
-##
+echo "Shell got return code number: $?"
+#
+#
 echo
 echo ----------- House keeping tests: Basic Debug Info ----------------
 ####
 ## Show Most Basic Debug Info
 $PROG_UNDER_TEST $1 -v --debug -P -T localhost
-##
+echo "Shell got return code number: $?"
+#
+#
 echo
-echo ----------- Successful --Ping and Timestamp work-------
+echo "----------- Successful --Multiple (3) pings (2.5 S) apart ----------------"
+####
+## Test option to do count pings, pause apart
+$PROG_UNDER_TEST $1 -c 3 -p 2.5 www.python.org
+echo "Shell got return code number: $?"
+#
+#
+echo
+echo "----------- Unsuccessful --Multiple (3) pings fail ----------------"
+####
+## Test option to do count pings, pause apart
+$PROG_UNDER_TEST $1 -c 3 time.windows.com
+echo "Shell got return code number: $?"
+#
+#
+echo
+echo ----------- Successful --Read DUT names from a file ----------------
+####
+## Test option to read DUT names from a file
+$PROG_UNDER_TEST $1 -f lnx.txt 
+echo "Shell got return code number: $?"
+#
+#
+echo
+echo "----------- Successful -- Compare -C (Correction) supression -------"
 ####
 ## Low (6-7mS) RTT ISP time source
 $PROG_UNDER_TEST $1 tic.ntp.telstra.net 
+echo "Shell got return code number: $?"
+##
+## Low (6-7mS) RTT ISP time source
+$PROG_UNDER_TEST $1 -C tic.ntp.telstra.net 
+echo "Shell got return code number: $?"
+#
+#
+echo
+echo ----------- Successful -- Timestamps from ISPs or Time Sources -------
+####
+## Low (6-7mS) RTT ISP time source
+$PROG_UNDER_TEST $1 tic.ntp.telstra.net 
+echo "Shell got return code number: $?"
 ##
 ## Med (18-19mS) RTT ISP time source
 $PROG_UNDER_TEST $1 time.optus.net
+echo "Shell got return code number: $?"
 ##
 ## 42-43mS RTT NZ time source
 $PROG_UNDER_TEST $1 s2.ntp.net.nz
+echo "Shell got return code number: $?"
 ##
 ## 226-227mS RTT US time source
 $PROG_UNDER_TEST $1 clock.he.net
+echo "Shell got return code number: $?"
 ##
 ## 309-312mS RTT French time source
 $PROG_UNDER_TEST $1 ntp.obspm.fr
+echo "Shell got return code number: $?"
 ##
 #
 echo
-echo ---------- Successful --Big Endian timestamps returned--------
+echo "---------- Successful -- Multiple DUT's from command line --------"
 ####
 ## FreeBSD and Ubuntu machines
 $PROG_UNDER_TEST $1 www.freebsd.org www.ubuntu.org
-##
-## Seems like a python program should naturally team up with www.python.org
-$PROG_UNDER_TEST $1 www.python.org
+echo "Shell got return code number: $?"
 #
 #
 echo
-echo ---------- Successful --Little Endian timestamps returned--------
+echo "---------- Successful -- Use of --quiet option for www.python.org --------"
+####
+## Seems like a python program should naturally team up with www.python.org
+$PROG_UNDER_TEST $1 --quiet www.python.org
+echo "Shell got return code number: $?"
+#
+#
+echo
+echo "---------- Successful -- Use of --hours option for www.python.org --------"
+####
+## Seems like a python program should naturally team up with www.python.org
+$PROG_UNDER_TEST $1 --hours www.python.org
+echo "Shell got return code number: $?"
+#
+#
+echo
+echo "---------- Successful -- Use of --milliseconds option for www.python.org --------"
+####
+## Seems like a python program should naturally team up with www.python.org
+$PROG_UNDER_TEST $1 --milliseconds www.python.org
+echo "Shell got return code number: $?"
+#
+#
+echo
+echo ---------- Successful -- Little Endian timestamps returned--------
 ####
 ## Ping and timestamp succeed, but timestamp is non-standard (little endian)
 $PROG_UNDER_TEST $1 wwh-2.onthe.net.au
+echo "Shell got return code number: $?"
 #
 #
 echo
-echo ---------- Mostly successful --Non-Standard timestamp indication--
+echo ---------- Mostly successful -- Non-Standard timestamp indication--
 ####
 ## Ping and timestamp succeed, but timestamp has non-standard flag set
 $PROG_UNDER_TEST $1 58.96.102.9
+echo "Shell got return code number: $?"
 #
 #
 echo
-echo ---------- Mostly unsuccessful --Destination Unreachable------
+echo ---------- Mostly unsuccessful -- Packet corruption ? ------
 ####
 ## Ping succeeds but timestamp gets a destination unreachable reply
-$PROG_UNDER_TEST $1 time.iinet.com.au
+$PROG_UNDER_TEST $1 --verbose time.iinet.com.au
+echo "Shell got return code number: $?"
 ##
 #
 #
 echo
-echo ---------- Unsuccessful --Ping fails, but Timestamp works--
+echo ---------- Unsuccessful -- Ping fails, but Timestamp works--
 ####
 ## Ping fails, but timestamp succeeds
 $PROG_UNDER_TEST $1 ntp-m.obspm.fr
+echo "Shell got return code number: $?"
 #
 #
 echo
-echo ---------- Unsuccessful --Ping works, but no Timestamp--
+echo ---------- Unsuccessful -- Ping works, but no Timestamp--
 ####
 ## Ping succeeds, but timestamp fails
 $PROG_UNDER_TEST $1 ntp.tpg.com.au
+echo "Shell got return code number: $?"
 #
 #
 echo
-echo ---------- Unsuccessful on purpose --Both Ping and Timestamp fail, but DNS ok--
+echo ---------- Unsuccessful on purpose -- Both Ping and Timestamp fail, but DNS ok--
 ####
 ## DNS ok, but no replies
-$PROG_UNDER_TEST $1 time.windows.com
+$PROG_UNDER_TEST $1 --verbose time.windows.com
+echo "Shell got return code number: $?"
 #
 #
 echo
-echo ---------- Unsuccessful on purpose --Test response to non-existant name--
+echo ---------- Unsuccessful on purpose -- Both Ping and Timestamp fail, but wait longer--
+####
+## DNS ok, but no replies
+$PROG_UNDER_TEST $1 -w 2.5 --verbose time.windows.com
+echo "Shell got return code number: $?"
+#
+#
+echo
+echo ---------- Unsuccessful on purpose -- Test response to non-existant name--
 ####
 ## DNS fails
 $PROG_UNDER_TEST $1 time.microsoft.com
+echo "Shell got return code number: $?"
 #
 
