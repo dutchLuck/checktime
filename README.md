@@ -28,9 +28,8 @@ The checktime.py command has a number of options which are outlined in the useag
 
 ```
 $ ./checktime.py --help
-
 Usage:
-./checktime.py [-cXCdDfA.ZhHmpX.XrsTvwX.X] [targetMachine ..[targetMachineN]]
+./checktime.py [-cXCdDfA.ZhHmMpX.XPqrsTvwX.X] [targetMachine ..[targetMachineN]]
  where; -
    -cX              send count timestamp requests with pause separation
    -C or --correction   disable naive half RTT correction to time difference
@@ -38,18 +37,20 @@ Usage:
    -D or --debug    prints out Debug information
    -fABC.DEF        specify target machines in a text file
    -h or --help     outputs this usage message
-   -H or --hours    outputs time on HH:MM:SS.SSS format
-   -m or --microsoft  reverses byte order of receive and transmit timestamps (suits MS Windows)
+   -H or --hours    sets output format to HH:MM:SS.SSS
+   -m or --microsoft  reverses byte order of timestamp reply (suits remote MS Windows)
+   -M or --milliseconds  sets output format to milliseconds
    -pX.X            pause X.X sec between multiple timestamp requests
    -P or --no-ping  don't send ICMP echo request
+   -q or --quiet    prints difference output value and units, but nothing else
    -r or --raw      selects SOCK_RAW but is over-ridden by -d or --dgram
-   -s or --standard selects SOCK_DGRAM
+   -s or --standard suggests normal byte order of timestamps be used
    -T or --no-time-stamp  don't send ICMP time stamp request
    -v or --verbose  prints verbose output
    -wX.X            wait X.X sec instead of default 2 sec before timing-out
    targetMachine is either the name or IP address of the computer to ping
  E.g.; -
-    ./checktime.py  -v -w5 127.0.0.1
+    ./checktime.py  -v www.python.org
 ```
 The same ICMP based time difference information can be obtained with greater confidence in (at least) Ubuntu
 18.04/20.04 LTS Linux by installing the  clockdiff  program. For example; -
@@ -69,5 +70,16 @@ Sun 27 Dec 19:24:42 AEDT 2020
 host=dualstack.python.map.fastly.net rtt=8(0)ms/8ms delta=0ms/0ms Sun Dec 27 19:24:49 2020
 Sun 27 Dec 19:24:49 AEDT 2020
 ```
+checktime.py appears to work on the following systems; -
+```
+Ubuntu 18.04 LTS with Python version 2.7.17
+Apple macOS 10.13.6 (High Sierra) with Python version 2.7.16
+Microsoft Windows 10.0.19042.685 and Python version 2.7.14
+```
+checktime.py and associated files can be downloaded from; -
+https://github.com/dutchLuck/checktime/
+and some level of confidence of correct operation can be gained by running the chk or chk.bat
+scripts in the the test folder. Some sites block ICMP timestamp and firewalls on machines
+may cause a failure to reply, so no matter how well this program works the end goal of
+obtaining time information from a remote device may simply be unattainable.
 
-https://tools.ietf.org/html/rfc792
