@@ -1,87 +1,166 @@
-@ECHO OFF
-REM #! /bin/sh 
-REM # 
-REM # C H K 
-REM # 
-REM # Last modified on Sat Oct 12 19:56:59 2019  
-REM # 
-REM # 
-REM # 
-REM # Linux and other similar systems need sudo, 
-REM #  however Mac OSX does not need sudo 
-REM # 
-REM # 
-ECHO  ----------- Successful 
-REM #### 
-REM ## Low (6-7mS) RTT ISP time source 
-python ..\checktime.py %1 tic.ntp.telstra.net  
-REM ## 
-REM ## Med (18-19mS) RTT ISP time source 
-python ..\checktime.py %1 time.optus.net  
-REM ## 
-REM ## 42-43mS RTT NZ time source 
-python ..\checktime.py %1 s2.ntp.net.nz  
-REM ## 
-REM ## 226-227mS RTT US time source 
-python ..\checktime.py %1 clock.he.net  
-REM ## 
-REM ## 309-312mS RTT French time source 
-python ..\checktime.py %1 ntp.obspm.fr  
-REM ## 
-REM ## 348-364mS RTT Swedish time source 
-python ..\checktime.py %1 time1.stupi.se  
-REM # 
-REM # 
-ECHO  ---------- Successful 
-REM #### 
-REM ## FreeBSD and Ubuntu machines 
-python ..\checktime.py %1 www.freebsd.org www.ubuntu.org 
-REM ## 
-REM ## Seems like a python program should naturally team up with www.python.org 
-python ..\checktime.py %1 www.python.org  
-REM # 
-REM # 
-ECHO  ---------- Successful 
-REM #### 
-REM ## Ping and timestamp succeed, but timestamp is non-standard (little endian) 
-python ..\checktime.py %1 wwh-2.onthe.net.au  
-REM # 
-REM # 
-ECHO  ---------- Mostly 
-REM #### 
-REM ## Ping and timestamp succeed, but timestamp has non-standard flag set 
-python ..\checktime.py %1 58.96.102.9  
-REM # 
-REM # 
-ECHO  ---------- Mostly 
-REM #### 
-REM ## Ping succeeds but timestamp gets a destination unreachable reply 
-python ..\checktime.py %1 time.iinet.com.au  
-REM ## 
-REM ## Both Ping and timestamp get a destination unreachable reply 
-python ..\checktime.py %1 www.openbsd.org  
-REM # 
-REM # 
-ECHO  ---------- Unsuccessful 
-REM #### 
-REM ## Ping fails, but timestamp succeeds 
-python ..\checktime.py %1 ntp-m.obspm.fr  
-REM # 
-REM # 
-ECHO  ---------- Unsuccessful 
-REM #### 
-REM ## Ping succeeds, but timestamp fails 
-python ..\checktime.py %1 ntp.tpg.com.au  
-REM # 
-REM # 
-ECHO  ---------- Unsuccessful 
-REM #### 
-REM ## DNS ok, but no replies 
-python ..\checktime.py %1 time.windows.com  
-REM # 
-REM # 
-ECHO  ---------- Unsuccessful 
-REM #### 
-REM ## DNS fails 
-python ..\checktime.py %1 time.microsoft.com  
-REM # 
+@Echo Off
+Rem #! /bin/sh 
+Rem # 
+Rem # C H K 
+Rem # 
+Rem # Last modified on Tue Dec 29 21:40:58 2020  
+Rem # 
+Rem # 
+Rem # 
+Rem # Linux and other similar systems need sudo, 
+Rem #  however Mac OSX does not need sudo 
+Rem # 
+Rem # 
+Echo ----------- House keeping tests: Version Number ----------------
+Rem #### 
+Rem ## Show version number 
+python ..\checktime.py %1 --verbose --no-ping --no-time-stamp localhost
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo ----------- House keeping tests: Basic Debug Info ----------------
+Rem #### 
+Rem ## Show Most Basic Debug Info 
+python ..\checktime.py %1 -v --debug -P -T localhost
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo "----------- Successful --Multiple (3) pings (2.5 S) apart ----------------"
+Rem #### 
+Rem ## Test option to do count pings, pause apart 
+python ..\checktime.py %1 -c 3 -p 2.5 www.python.org
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo "----------- Unsuccessful --Multiple (3) pings fail ----------------"
+Rem #### 
+Rem ## Test option to do count pings, pause apart 
+python ..\checktime.py %1 -c 3 time.windows.com
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo ----------- Successful --Read DUT names from a file ----------------
+Rem #### 
+Rem ## Test option to read DUT names from a file 
+python ..\checktime.py %1 -f lnx.txt
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo "----------- Successful -- Compare -C (Correction) supression -------"
+Rem #### 
+Rem ## Low (6-7mS) RTT ISP time source 
+python ..\checktime.py %1 tic.ntp.telstra.net
+Echo Error Level %ERRORLEVEL% returned 
+Rem ## 
+Rem ## Low (6-7mS) RTT ISP time source 
+python ..\checktime.py %1 -C tic.ntp.telstra.net
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo ----------- Successful -- Timestamps from ISPs or Time Sources -------
+Rem #### 
+Rem ## Low (6-7mS) RTT ISP time source 
+python ..\checktime.py %1 tic.ntp.telstra.net
+Echo Error Level %ERRORLEVEL% returned 
+Rem ## 
+Rem ## Med (18-19mS) RTT ISP time source 
+python ..\checktime.py %1 time.optus.net
+Echo Error Level %ERRORLEVEL% returned 
+Rem ## 
+Rem ## 42-43mS RTT NZ time source 
+python ..\checktime.py %1 s2.ntp.net.nz
+Echo Error Level %ERRORLEVEL% returned 
+Rem ## 
+Rem ## 226-227mS RTT US time source 
+python ..\checktime.py %1 clock.he.net
+Echo Error Level %ERRORLEVEL% returned 
+Rem ## 
+Rem ## 309-312mS RTT French time source 
+python ..\checktime.py %1 ntp.obspm.fr
+Echo Error Level %ERRORLEVEL% returned 
+Rem ## 
+Rem # 
+Echo "---------- Successful -- Multiple DUT's from command line --------"
+Rem #### 
+Rem ## FreeBSD and Ubuntu machines 
+python ..\checktime.py %1 www.freebsd.org www.ubuntu.org
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo "---------- Successful -- Use of --quiet option for www.python.org --------"
+Rem #### 
+Rem ## Seems like a python program should naturally team up with www.python.org 
+python ..\checktime.py %1 --quiet www.python.org
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo "---------- Successful -- Use of --hours option for www.python.org --------"
+Rem #### 
+Rem ## Seems like a python program should naturally team up with www.python.org 
+python ..\checktime.py %1 --hours www.python.org
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo "---------- Successful -- Use of --milliseconds option for www.python.org --------"
+Rem #### 
+Rem ## Seems like a python program should naturally team up with www.python.org 
+python ..\checktime.py %1 --milliseconds www.python.org
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo ---------- Successful -- Little Endian timestamps returned--------
+Rem #### 
+Rem ## Ping and timestamp succeed, but timestamp is non-standard (little endian) 
+python ..\checktime.py %1 wwh-2.onthe.net.au
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo ---------- Mostly successful -- Non-Standard timestamp indication--
+Rem #### 
+Rem ## Ping and timestamp succeed, but timestamp has non-standard flag set 
+python ..\checktime.py %1 58.96.102.9
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo ---------- Mostly unsuccessful -- Packet corruption ? ------
+Rem #### 
+Rem ## Ping succeeds but timestamp gets a destination unreachable reply 
+python ..\checktime.py %1 --verbose time.iinet.com.au
+Echo Error Level %ERRORLEVEL% returned 
+Rem ## 
+Rem # 
+Rem # 
+Echo ---------- Unsuccessful -- Ping fails, but Timestamp works--
+Rem #### 
+Rem ## Ping fails, but timestamp succeeds 
+python ..\checktime.py %1 ntp-m.obspm.fr
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo ---------- Unsuccessful -- Ping works, but no Timestamp--
+Rem #### 
+Rem ## Ping succeeds, but timestamp fails 
+python ..\checktime.py %1 ntp.tpg.com.au
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo ---------- Unsuccessful on purpose -- Both Ping and Timestamp fail, but DNS ok--
+Rem #### 
+Rem ## DNS ok, but no replies 
+python ..\checktime.py %1 --verbose time.windows.com
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo ---------- Unsuccessful on purpose -- Both Ping and Timestamp fail, but wait longer--
+Rem #### 
+Rem ## DNS ok, but no replies 
+python ..\checktime.py %1 -w 2.5 --verbose time.windows.com
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
+Rem # 
+Echo ---------- Unsuccessful on purpose -- Test response to non-existant name--
+Rem #### 
+Rem ## DNS fails 
+python ..\checktime.py %1 time.microsoft.com
+Echo Error Level %ERRORLEVEL% returned 
+Rem # 
