@@ -4,7 +4,7 @@ Check the time on another networked computer or network device, by sending an IP
 This timestamp request expects to trigger an ICMP timestamp reply from the remote device. The expected
 reply contains the number of milliseconds since midnight on the remote device at the time the request
 arrived. Consequently if the remote device happens to be more than 24 hours different, any program using
-ICMP timestamp, including checktime.py, cannot detect this, so the answer given will by mod 24 hours.
+ICMP timestamp, including checktime.py, cannot detect this, so the answer given will be mod 24 hours.
 Initially checktime.py pings (IPv4 ICMP Echo Request) the specified computer or network device and then
 waits for an ICMP Echo Reply. If it does not receive an echo reply within 2 seconds it prints a "failed"
 message. No message is printed on success, unless --verbose option is used when the program is run. After
@@ -21,8 +21,9 @@ program chooses the smallest time difference, if both forms yield valid timestam
 this assumption that the smallest time difference is the most likely the best choice, will be false.
 Command line options can be used to force the timestamp to be interpreted either big or little endian.
 Options are outlined by using the --help command line option. This program requires privileged access
-to the network interface, except on Apple Mac OSX. This is normally provided by using the sudo command
-on linux and running as Administrator on Windows.
+to the network interface to facilitate the use of a raw socket, except on Apple Mac OSX, where by default
+a datagram socket is used. Privileged network interface access is normally provided by using the sudo
+command on Linux and running as Administrator on Windows.
 
 The checktime.py command has a number of options which are outlined in the useage information.
 
@@ -52,8 +53,8 @@ Usage:
  E.g.; -
     ./checktime.py  -v www.python.org
 ```
-The same ICMP based time difference information can be obtained with greater confidence in (at least) Ubuntu
-18.04/20.04 LTS Linux by installing the  clockdiff  program. For example; -
+The same ICMP based time difference information can be obtained with greater confidence in (at least)
+Ubuntu 18.04/20.04 LTS Linux by installing the  clockdiff  program. For example; -
 
 ```
 xx@yy:~$ clockdiff www.python.org
@@ -70,6 +71,11 @@ Sun 27 Dec 19:24:42 AEDT 2020
 host=dualstack.python.map.fastly.net rtt=8(0)ms/8ms delta=0ms/0ms Sun Dec 27 19:24:49 2020
 Sun 27 Dec 19:24:49 AEDT 2020
 ```
+I do not know of an equivalent of clockdiff that is native to Microsoft Windows based machines. A ping
+program for Windows that can send ICMP timestamp requests and receive timestamp replies is hrPing from
+cFos Software GmbH. There maybe other Windows software out there that is more specific to determining
+the time difference between machines, but I am not aware of any.
+
 checktime.py appears to work on the following systems; -
 ```
 Ubuntu 18.04 LTS with Python version 2.7.17
