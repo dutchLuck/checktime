@@ -22,8 +22,8 @@ this assumption that the smallest time difference is the most likely the best ch
 Command line options can be used to force the timestamp to be interpreted either big or little endian.
 Options are outlined by using the --help command line option. This program requires privileged access
 to the network interface to facilitate the use of a raw socket, except on Apple Mac OSX, where by default
-a datagram socket is used. Privileged network interface access is normally provided by using the sudo
-command on Linux and running as Administrator on Windows.
+a datagram socket is used. Privileged network interface access is normally facilitated by using the sudo
+command on Linux or running as Administrator on Windows.
 
 The checktime.py command has a number of options which are outlined in the useage information.
 
@@ -85,7 +85,7 @@ Microsoft Windows 10.0.19042.685 and Python version 2.7.14
 checktime.py and associated files can be downloaded from; -
 https://github.com/dutchLuck/checktime/
 and some level of confidence of correct operation can be gained by running the chk or chk.bat
-scripts in the the test folder. Some sites block ICMP timestamp and firewalls on machines
+scripts in the test folder. Some sites block ICMP timestamp and firewalls on machines
 may cause a failure to reply, so no matter how well this program works the end goal of
 obtaining time information from a remote device may simply be unattainable.
 
