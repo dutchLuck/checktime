@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Sun Jan 17 22:52:22 2021
+# Last Modified on Mon Jan 18 22:43:12 2021
 #
 
 #
@@ -60,7 +60,7 @@ options = {
 # Get the most accurate time available on the local system
 def getClockTime():
     if sys.platform == "win32":
-        systemWallClockTime = _time.clock()
+        systemWallClockTime = _time.time_ns() / 1000000000.0
     else:
         systemWallClockTime = _time.time()  # best on most platforms is time.time
     return systemWallClockTime
@@ -1174,7 +1174,7 @@ def main():
     if options["debug"]:
         print()
     if options["debug"] or options["verbose"]:
-        print("checktime.py 0v19, Jan 2021")
+        print("checktime.py 0v20, Jan 2021")
     if options["debug"]:
         print("\nCheck the time on one or more networked devices")
         print(
