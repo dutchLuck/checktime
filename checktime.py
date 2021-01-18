@@ -1,10 +1,10 @@
-#! /usr/bin/python2
+#! /usr/bin/python3
 #
 # C H E C K T I M E . P Y
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Tue Dec 29 23:16:20 2020
+# Last Modified on Sun Jan 17 22:52:22 2021
 #
 
 #
@@ -79,10 +79,10 @@ def calcTimeSinceUTC_Midnight():
 
 # Convert milliseconds to hours, minutes and seconds format
 def convertMillisecondsSinceMidnight(milliseconds):
-    msecs = milliseconds % 1000L
-    hrs = milliseconds / 3600000L
-    mins = (milliseconds - (hrs * 3600000L)) / 60000L
-    secs = (milliseconds - (hrs * 3600000L + mins * 60000L)) / 1000L
+    msecs = milliseconds % 1000
+    hrs = milliseconds / 3600000
+    mins = (milliseconds - (hrs * 3600000)) / 60000
+    secs = (milliseconds - (hrs * 3600000 + mins * 60000)) / 1000
     mS_Time = {"hours": hrs, "minutes": mins, "seconds": secs, "milliSeconds": msecs}
     return mS_Time
 
@@ -122,8 +122,8 @@ def constructICMP_TIMESTAMP_REQUEST_Packet(pid, seq):
     originateTime = struct.pack(
         "!L", calcTimeSinceUTC_Midnight()
     )  # put timestamp as unsigned long in network order
-    receiveTime = struct.pack("!L", 0L)
-    transmitTime = struct.pack("!L", 0L)
+    receiveTime = struct.pack("!L", 0)
+    transmitTime = struct.pack("!L", 0)
     return constructICMP_Datagram(
         ICMP_TIMESTAMP_REQUEST, pid, seq, originateTime + receiveTime + transmitTime
     )
@@ -132,16 +132,16 @@ def constructICMP_TIMESTAMP_REQUEST_Packet(pid, seq):
 # Print a Hex dump of a string of data
 def printDataStringInHex(dataString):
     length = len(dataString)
-    for cnt in xrange(0, length, 1):
+    for cnt in range(0, length, 1):
         if (cnt % 16) == 0:
-            print "\n%04u: %02x" % (cnt, ord(dataString[cnt])),
+            print("\n%04u: %02x" % (cnt, ord(dataString[cnt])), end=" ")
         else:
-            print "%02x" % ord(dataString[cnt]),
-    print
+            print("%02x" % ord(dataString[cnt]), end=" ")
+    print()
 
 
 def labelAndPrintDataStringInHex(label, dataString):
-    print label,
+    print(label, end=" ")
     printDataStringInHex(dataString)
 
 
@@ -163,26 +163,22 @@ def compareDataStrings(dataStr1, dataStr2):
 
 # Print the header part of a version 4 IP packet
 def printIP4_Header(header):
-    print "IP ver .. ", header["ver"]
-    print "IP hdr len", header["hdr_len"]
-    print "dscp ... 0x%02x " % header["dscp"]
-    print "totl len %u" % header["totl_len"]
-    print "id ..... 0x%04x " % header["pkt_id"]
-    print "frag ... 0x%04x " % header["frag"]
-    print "ttl ....", header["ttl"]
-    print "proto .. 0x%02x " % header["prot"]
-    print "csum ... 0x%04x " % header["csum"]
-    print "src IP . %03u.%03u.%03u.%03u" % (
-        header["s1"],
-        header["s2"],
-        header["s3"],
-        header["s4"],
+    print("IP ver .. ", header["ver"])
+    print("IP hdr len", header["hdr_len"])
+    print("dscp ... 0x%02x " % header["dscp"])
+    print("totl len %u" % header["totl_len"])
+    print("id ..... 0x%04x " % header["pkt_id"])
+    print("frag ... 0x%04x " % header["frag"])
+    print("ttl ....", header["ttl"])
+    print("proto .. 0x%02x " % header["prot"])
+    print("csum ... 0x%04x " % header["csum"])
+    print(
+        "src IP . %03u.%03u.%03u.%03u"
+        % (header["s1"], header["s2"], header["s3"], header["s4"])
     )
-    print "dst IP . %03u.%03u.%03u.%03u" % (
-        header["d1"],
-        header["d2"],
-        header["d3"],
-        header["d4"],
+    print(
+        "dst IP . %03u.%03u.%03u.%03u"
+        % (header["d1"], header["d2"], header["d3"], header["d4"])
     )
     return
 
@@ -255,20 +251,20 @@ def parseAndCheckIP4_PacketHeader(data, optns):
     else:
         chckSum = calcChecksum(data)
     if chckSum != 0:
-        print "\n?? The IPv4 packet check sum calculates to 0x%04x not zero" % chckSum
+        print("\n?? The IPv4 packet check sum calculates to 0x%04x not zero" % chckSum)
     if optns["debug"]:
-        print "The header of the IPv4 packet received was; -"
+        print("The header of the IPv4 packet received was; -")
         printIP4_Header(parsedIPv4_Hdr)
         labelAndPrintDataStringInHex("The IPv4 packet received in hex format; -", data)
     return parsedIPv4_Hdr, parsedIPv4_Payload
 
 
 def printICMP_Header(header):
-    print "ICMP type ... 0x%02x " % header["ICMP_Type"]
-    print "ICMP code ... 0x%02x " % header["code"]
-    print "ICMP checksum 0x%04x " % header["checksum"]
-    print "ICMP id ..... 0x%04x " % header["id"]
-    print "ICMP sequence 0x%04x " % header["sequence"]
+    print("ICMP type ... 0x%02x " % header["ICMP_Type"])
+    print("ICMP code ... 0x%02x " % header["code"])
+    print("ICMP checksum 0x%04x " % header["checksum"])
+    print("ICMP id ..... 0x%04x " % header["id"])
+    print("ICMP sequence 0x%04x " % header["sequence"])
     return
 
 
@@ -288,11 +284,14 @@ def parseAndCheckICMP_Data(data):
     ICMP_Header, ICMP_Payload = parseICMP_Data(data)
     chckSum = calcChecksum(data)
     if chckSum != 0:
-        print "\n?? The ICMP check sum test failed (it calculates to 0x%04x, not 0)" % chckSum
+        print(
+            "\n?? The ICMP check sum test failed (it calculates to 0x%04x, not 0)"
+            % chckSum
+        )
         chckSum = calcChecksum(data[:8])
-        print "?? The ICMP Header check sum calculates to 0x%04x" % chckSum
+        print("?? The ICMP Header check sum calculates to 0x%04x" % chckSum)
     if options["debug"]:
-        print "The header of the ICMP datagram is; -"
+        print("The header of the ICMP datagram is; -")
         printICMP_Header(ICMP_Header)
         labelAndPrintDataStringInHex("The ICMP datagram in hex format is; -", data)
     return ICMP_Header, ICMP_Payload
@@ -314,17 +313,18 @@ def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
     if hdr["ICMP_Type"] == ICMP_ECHO_REPLY:
         timeStamp = struct.unpack("!d", payload[:_d_size])[0]
         if optns["debug"]:
-            print "\nICMP (type %d, code %d) packet received is an ICMP Echo Reply" % (
-                hdr["ICMP_Type"],
-                hdr["code"],
+            print(
+                "\nICMP (type %d, code %d) packet received is an ICMP Echo Reply"
+                % (hdr["ICMP_Type"], hdr["code"])
             )
     else:
         timeStamp = 0
         if optns["debug"]:
-            print "----------- Reply to ICMP Echo Request was; -"
-            print "?? ICMP (type %d) packet received is not an ICMP Echo Reply" % hdr[
-                "ICMP_Type"
-            ]
+            print("----------- Reply to ICMP Echo Request was; -")
+            print(
+                "?? ICMP (type %d) packet received is not an ICMP Echo Reply"
+                % hdr["ICMP_Type"]
+            )
             printICMP_Header(hdr)
             labelAndPrintDataStringInHex(
                 "The data in the unexpected ICMP datagram is; -", payload
@@ -335,28 +335,26 @@ def parseICMP_ECHO_REPLY_PacketWithTimeStamp(data, optns):
 
 def printTimeStampAsHrsMinSecsSinceMidnight(timeStamp):
     if timeStamp == 0:
-        print "00:00:00.000",
+        print("00:00:00.000", end=" ")
     elif timeStamp < 0:
         timeStamp = abs(timeStamp)
         tsTm = convertMillisecondsSinceMidnight(abs(timeStamp))
-        print "-%02ld:%02ld:%02ld.%03ld" % (
-            tsTm["hours"],
-            tsTm["minutes"],
-            tsTm["seconds"],
-            tsTm["milliSeconds"],
-        ),
+        print(
+            "-%02ld:%02ld:%02ld.%03ld"
+            % (tsTm["hours"], tsTm["minutes"], tsTm["seconds"], tsTm["milliSeconds"]),
+            end=" ",
+        )
     else:
         tsTm = convertMillisecondsSinceMidnight(timeStamp)
-        print "%02ld:%02ld:%02ld.%03ld" % (
-            tsTm["hours"],
-            tsTm["minutes"],
-            tsTm["seconds"],
-            tsTm["milliSeconds"],
-        ),
+        print(
+            "%02ld:%02ld:%02ld.%03ld"
+            % (tsTm["hours"], tsTm["minutes"], tsTm["seconds"], tsTm["milliSeconds"]),
+            end=" ",
+        )
 
 
 def printTimeStampAsMilliSeconds(timeStamp):
-    print "%ld" % timeStamp,
+    print("%ld" % timeStamp, end=" ")
 
 
 def printTimeStampAsHrsMinSecsUnlessMillisecsOptionIsInvoked(timeStamp):
@@ -381,42 +379,42 @@ def printTimeStampAccordingToOptions(timeStamp):
     else:
         testValue = timeStamp / 1000.0
         if abs(testValue) < 1.0:
-            print "%ld" % timeStamp,
+            print("%ld" % timeStamp, end=" ")
         elif abs(testValue) < 60.0:
-            print "%7.3lf" % testValue,
+            print("%7.3lf" % testValue, end=" ")
         else:
             testValue = timeStamp / 60000.0
             if abs(testValue) < 60.0:
-                print "%7.3lf" % testValue,
+                print("%7.3lf" % testValue, end=" ")
             else:
                 testValue = timeStamp / 3600000.0
                 if abs(testValue) < 24.0:
-                    print "%7.3lf" % testValue,
+                    print("%7.3lf" % testValue, end=" ")
                 else:
                     printTimeStampAsMilliSeconds(timeStamp)
 
 
 def printTimeStampUnitsAccordingToOptions(timeStamp):
     if options["hours"]:
-        print "[HH:MM:SS.SSS]",
+        print("[HH:MM:SS.SSS]", end=" ")
     elif options["mSecs"]:
-        print "[mS]",
+        print("[mS]", end=" ")
     else:
         testValue = timeStamp / 1000.0
         if abs(testValue) < 1.0:
-            print "[mS]",
+            print("[mS]", end=" ")
         elif abs(testValue) < 60.0:
-            print "[S]",
+            print("[S]", end=" ")
         else:
             testValue = timeStamp / 60000.0
             if abs(testValue) < 60.0:
-                print "[mins]",
+                print("[mins]", end=" ")
             else:
                 testValue = timeStamp / 3600000.0
                 if abs(testValue) < 24.0:
-                    print "[hrs]",
+                    print("[hrs]", end=" ")
                 else:
-                    print "[mS]",
+                    print("[mS]", end=" ")
 
 
 def printTimeStampValueAndUnitsAccordingToOptions(timeStamp):
@@ -426,12 +424,12 @@ def printTimeStampValueAndUnitsAccordingToOptions(timeStamp):
 
 
 def informUserAboutTimestamp(msg, timeStamp):
-    print msg, "timestamp:",
+    print(msg, "timestamp:", end=" ")
     printTimeStampAsHrsMinSecsSinceMidnight(timeStamp)
     if options["verbose"]:
-        print "(%ld (0x%08x) mS since midnight UTC)" % (timeStamp, timeStamp)
+        print("(%ld (0x%08x) mS since midnight UTC)" % (timeStamp, timeStamp))
     else:
-        print
+        print()
 
 
 def informUserAboutTimestamps(timestamps):
@@ -441,26 +439,28 @@ def informUserAboutTimestamps(timestamps):
 
 
 def informUserAboutTimestampProblem(msg, timeStamps):
-    print "\n?? ", msg
+    print("\n?? ", msg)
     informUserAboutTimestamps(timeStamps)
-    print "!! Hint: If target computer is running MS Windows try the -m (--microsoft) option"
+    print(
+        "!! Hint: If target computer is running MS Windows try the -m (--microsoft) option"
+    )
 
 
 def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
     parsedOk = False
     tmStmps = {
-        "originate": 0L,
-        "received": 0L,
-        "transmit": 0L,
-        "compensation": 0L,
-        "difference": 0L,
+        "originate": 0,
+        "received": 0,
+        "transmit": 0,
+        "compensation": 0,
+        "difference": 0,
     }  # preset timestamps to 0
     if optns["debug"]:
-        print "\n----------- ICMP Time Stamp Reply is; -"
+        print("\n----------- ICMP Time Stamp Reply is; -")
         printICMP_Header(hdr)
         labelAndPrintDataStringInHex("The data in the ICMP datagram is; -", payload)
     if len(payload) < 12:  # Check length of data which should contain 3 timestamps
-        print "?? Expected at least 3 * 4 byte reply, but got", len(payload)
+        print("?? Expected at least 3 * 4 byte reply, but got", len(payload))
         if optns["verbose"]:
             labelAndPrintDataStringInHex("The truncated ICMP data in hex is; -", payoad)
     else:
@@ -487,7 +487,9 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
         ):  # use Big endian byte order
             tmStmps[
                 "originate"
-            ] = ot  # set signed originate value, which is assumed to be in proper format
+            ] = (
+                ot
+            )  # set signed originate value, which is assumed to be in proper format
             tmStmps["received"] = rt  # set signed received stamp value
             tmStmps["transmit"] = tt  # set signed transmit stamp value
             utmStmps = {
@@ -496,13 +498,15 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
                 "transmit": utt,
             }  # set (at least) originate
             if optns["debug"]:
-                print "Big endian byte order used to process returned timestamps"
+                print("Big endian byte order used to process returned timestamps")
         elif optns["reverse"] or (
             rtt <= 86400000 and rtt >= 0
         ):  # use Little endian byte order on returned timestamps
             tmStmps[
                 "originate"
-            ] = ot  # set signed originate value, which is assumed to be in proper format
+            ] = (
+                ot
+            )  # set signed originate value, which is assumed to be in proper format
             tmStmps["received"] = rrt  # set signed received stamp value
             tmStmps["transmit"] = rtt  # set signed transmit stamp value
             utmStmps = {
@@ -511,11 +515,13 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
                 "transmit": rutt,
             }  # set (at least) originate
             if optns["debug"]:
-                print "Little endian byte order used to process returned timestamps"
+                print("Little endian byte order used to process returned timestamps")
         else:  # Catch all is to assume big endian even though out of valid range
             tmStmps[
                 "originate"
-            ] = ot  # set signed originate value, which is assumed to be in proper format
+            ] = (
+                ot
+            )  # set signed originate value, which is assumed to be in proper format
             tmStmps["received"] = rt  # set signed big endian received stamp value
             tmStmps["transmit"] = tt  # set signed big endian transmit stamp value
             utmStmps = {
@@ -524,17 +530,17 @@ def parseICMP_TIMESTAMP_REPLY_Packet(hdr, payload, optns):
                 "transmit": utt,
             }  # set (at least) originate
             if optns["debug"]:
-                print "Big endian byte order used to process returned timestamps"
+                print("Big endian byte order used to process returned timestamps")
         if (
             tmStmps["transmit"] < 0
         ):  # A minus value indicates a non-standard timestamp is flagged
             informUserAboutTimestampProblem(
                 "Non-standard transmit timestamp returned", utmStmps
             )
-            tmStmps["received"] = long(
+            tmStmps["received"] = int(
                 0x7FFFFFFF & utmStmps["received"]
             )  # try removing non-standard bit
-            tmStmps["transmit"] = long(
+            tmStmps["transmit"] = int(
                 0x7FFFFFFF & utmStmps["transmit"]
             )  # try removing non-standard bit
         if (
@@ -564,9 +570,9 @@ def socket():
 
 
 def printTargetNameAndOrIP_Address(name, ipAddress):
-    print '"%s"' % name,
+    print('"%s"' % name, end=" ")
     if name != str(ipAddress):
-        print "(%s)" % str(ipAddress),
+        print("(%s)" % str(ipAddress), end=" ")
 
 
 def informUserIfRequired(level, message, data):
@@ -574,9 +580,9 @@ def informUserIfRequired(level, message, data):
         labelAndPrintDataStringInHex(message, data)
     elif options["verbose"]:
         if level > 1:
-            print message
+            print(message)
     elif level > 0:
-        print message
+        print(message)
 
 
 def isNotAnIPv4_Packet(data):
@@ -612,7 +618,12 @@ def isNotAnIPv4_ICMP_EchoReplyPacket(data):
         return True
     icmpType, icmpCode = struct.unpack("!BB", data[hdrLength : hdrLength + 2])
     if options["debug"]:
-        print "isNotAnIPv4_ICMP_EchoReplyPacket(): icmpType", icmpType, "icmpCode", icmpCode
+        print(
+            "isNotAnIPv4_ICMP_EchoReplyPacket(): icmpType",
+            icmpType,
+            "icmpCode",
+            icmpCode,
+        )
     return icmpType != ICMP_ECHO_REPLY
 
 
@@ -624,7 +635,14 @@ def isAnIPv4_ICMP_OfType(ICMP_TYPE, data):
         return False
     icmpType, icmpCode = struct.unpack("!BB", data[hdrLength : hdrLength + 2])
     if options["debug"]:
-        print "isAnIPv4_ICMP_OfType(", ICMP_TYPE, "): icmpType", icmpType, "icmpCode", icmpCode
+        print(
+            "isAnIPv4_ICMP_OfType(",
+            ICMP_TYPE,
+            "): icmpType",
+            icmpType,
+            "icmpCode",
+            icmpCode,
+        )
     return icmpType == ICMP_TYPE
 
 
@@ -645,17 +663,16 @@ def isThisDestinationUnreachableA_ResponseToThePacketWeSent(
 ):
     result = False
     if options["debug"]:
-        print "Entering isThisDestinationUnreachableA_ResponseToThePacketWeSent()"
+        print("Entering isThisDestinationUnreachableA_ResponseToThePacketWeSent()")
     ip4_Hdr, ip4_Data = parseIP4_PacketHeader(receivedPacket, options)
     if (
         ip4_Hdr["prot"] == 0x01
     ):  # Should be redundant, but ignore the received packet if it is not ICMP
         icmpHdr, icmpPayload = parseAndCheckICMP_Data(ip4_Data)
         if options["debug"]:
-            print "Received an ICMP (%d (0x%02x)) packet from %s" % (
-                icmpHdr["ICMP_Type"],
-                icmpHdr["ICMP_Type"],
-                peer[0],
+            print(
+                "Received an ICMP (%d (0x%02x)) packet from %s"
+                % (icmpHdr["ICMP_Type"], icmpHdr["ICMP_Type"], peer[0])
             )
         if (
             icmpHdr["ICMP_Type"] == ICMP_DESTINATION_UNREACHABLE
@@ -665,7 +682,7 @@ def isThisDestinationUnreachableA_ResponseToThePacketWeSent(
             )  # Unwind possible MacOS X changes to header info
             errPktHdr, errPktPayload = parseIP4_PacketHeader(icmpPayload, options)
             if options["debug"]:
-                print "Received the following ICMP Destination Unreachable packet; -"
+                print("Received the following ICMP Destination Unreachable packet; -")
                 printIP4_Header(errPktHdr)
                 printDataStringInHex(errPktPayload)
             if (
@@ -673,7 +690,9 @@ def isThisDestinationUnreachableA_ResponseToThePacketWeSent(
             ):  # Was the sent packet that resulted in this reply an ICMP packet
                 errPktPayloadAsICMP_Hdr, _ = parseAndCheckICMP_Data(errPktPayload)
                 if options["debug"]:
-                    print "The ICMP header that caused the Destination Unreachable reply is; -"
+                    print(
+                        "The ICMP header that caused the Destination Unreachable reply is; -"
+                    )
                     printICMP_Header(errPktPayloadAsICMP_Hdr)
                 result = compareDataStrings(
                     errPktPayload, transmittedPacket
@@ -684,16 +703,16 @@ def isThisDestinationUnreachableA_ResponseToThePacketWeSent(
 def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns, pid):
     exitLoopFlag = False
     if optns["debug"]:
-        print "\n--- Attempting to get ICMP echo (ping) from",
+        print("\n--- Attempting to get ICMP echo (ping) from", end=" ")
         printTargetNameAndOrIP_Address(address, addr)
-        print
+        print()
     try:
         s = socket()
         s.settimeout(optns["wait"])
         # Build an ICMP Echo Request Packet
         pingPacket = constructICMP_ECHO_REQUEST_Packet(pid, 1)
         if optns["debug"]:
-            print "\n----------- ICMP Echo Request is; -"
+            print("\n----------- ICMP Echo Request is; -")
             ICMP_Hdr, ICMP_Payload = parseAndCheckICMP_Data(pingPacket)
             printICMP_Header(ICMP_Hdr)
             printDataStringInHex(ICMP_Payload)
@@ -772,15 +791,15 @@ def pingWithICMP_ECHO_REQUEST_Packet(address, addr, optns, pid):
                     packet,
                 )
         return recvTime - sentTime
-    except _socket.timeout, msg:
+    except _socket.timeout as msg:
         if optns["verbose"]:
             printTargetNameAndOrIP_Address(address, addr)
-            print "%s sec wait for ping reply %s" % (optns["wait"], msg)
+            print("%s sec wait for ping reply %s" % (optns["wait"], msg))
         return 9.999999
-    except _socket.error, msg:
+    except _socket.error as msg:
         if optns["verbose"]:
             printTargetNameAndOrIP_Address(address, addr)
-            print "ping attempt failed due to: %s" % msg
+            print("ping attempt failed due to: %s" % msg)
         return 9.999999
 
 
@@ -789,16 +808,16 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(
 ):
     success = False
     tStamps = {
-        "originate": 0L,
-        "received": 0L,
-        "transmit": 0L,
-        "compensation": 0L,
-        "difference": 0L,
+        "originate": 0,
+        "received": 0,
+        "transmit": 0,
+        "compensation": 0,
+        "difference": 0,
     }  # preset timestamps to 0
     if optns["debug"]:
-        print "\n--- Attempting to get ICMP timestamp from",
+        print("\n--- Attempting to get ICMP timestamp from", end=" ")
         printTargetNameAndOrIP_Address(address, addr)
-        print
+        print()
     try:
         s = socket()  # Attempt to open a socket
         s.settimeout(optns["wait"])
@@ -808,7 +827,7 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(
         )
         ICMP_TsReqHdr, ICMP_TsReqPayload = parseAndCheckICMP_Data(icmpTsReqPckt)
         if optns["debug"]:
-            print "\n----------- ICMP Timestamp Request is; -"
+            print("\n----------- ICMP Timestamp Request is; -")
             printICMP_Header(ICMP_TsReqHdr)
             printDataStringInHex(ICMP_TsReqPayload)
         sentTime = getClockTime()
@@ -854,9 +873,10 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(
                     icmpHdr["sequence"] != originateSequenceNumber
                 ):  # Ignore the icmp data if sequence number does not match
                     if optns["verbose"]:
-                        print "Received an ICMP timestamp reply datagram, but the sequence number 0x%04x does not match" % icmpHdr[
-                            "sequence"
-                        ]
+                        print(
+                            "Received an ICMP timestamp reply datagram, but the sequence number 0x%04x does not match"
+                            % icmpHdr["sequence"]
+                        )
                 else:
                     success, tStamps = parseICMP_TIMESTAMP_REPLY_Packet(
                         icmpHdr, icmpPayload, optns
@@ -865,14 +885,14 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(
                         travelTime = recvTime - sentTime
                         if optns["correction"]:
                             # Calculate time difference in mS as straight forward subtraction - correction 0 mS
-                            tStamps["compensation"] = 0L
+                            tStamps["compensation"] = 0
                         else:
                             # Calculate time difference using naive correction of half the Round Trip Time in mS
-                            tStamps["compensation"] = long(500.0 * travelTime)
+                            tStamps["compensation"] = int(500.0 * travelTime)
                         if optns["debug"]:
-                            print "ICMP Travel Time was %lf [S] and Compensation to be applied is: %ld [mS]" % (
-                                travelTime,
-                                tStamps["compensation"],
+                            print(
+                                "ICMP Travel Time was %lf [S] and Compensation to be applied is: %ld [mS]"
+                                % (travelTime, tStamps["compensation"])
                             )
                         tStamps["difference"] = (
                             tStamps["transmit"]
@@ -880,17 +900,19 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(
                             - tStamps["compensation"]
                         )
                         if optns["debug"]:
-                            print "Calculated initial time difference is: %ld" % (
-                                tStamps["difference"]
+                            print(
+                                "Calculated initial time difference is: %ld"
+                                % (tStamps["difference"])
                             )
-                        if abs(tStamps["difference"]) > 43200000L:
-                            if tStamps["transmit"] < 43200000L:
-                                tStamps["difference"] += 86400000L
+                        if abs(tStamps["difference"]) > 43200000:
+                            if tStamps["transmit"] < 43200000:
+                                tStamps["difference"] += 86400000
                             else:
-                                tStamps["difference"] -= 86400000L
+                                tStamps["difference"] -= 86400000
                         if optns["debug"]:
-                            print "Calculated most likely difference is: %ld" % (
-                                tStamps["difference"]
+                            print(
+                                "Calculated most likely difference is: %ld"
+                                % (tStamps["difference"])
                             )
                         s.close()
                         break
@@ -925,14 +947,14 @@ def pingWithICMP_TIMESTAMP_REQUEST_Packet(
                     "Received an ICMP packet, but not a Timestamp Reply or Destination Unreachable",
                     receivedPacket,
                 )
-    except _socket.timeout, msg:
+    except _socket.timeout as msg:
         if optns["verbose"]:
             printTargetNameAndOrIP_Address(address, addr)
-            print "%s sec wait for timestamp reply %s" % (optns["wait"], msg)
-    except _socket.error, msg:
+            print("%s sec wait for timestamp reply %s" % (optns["wait"], msg))
+    except _socket.error as msg:
         if optns["verbose"]:
             printTargetNameAndOrIP_Address(address, addr)
-            print "timestamp acquisition failed due to: %s" % msg
+            print("timestamp acquisition failed due to: %s" % msg)
     finally:
         return success, tStamps
 
@@ -951,29 +973,38 @@ def getLocalIP():
 
 
 def usage():
-    print "Usage:\n%s [-cXCdDfA.ZhHmMpX.XPqrsTvwX.X] [targetMachine ..[targetMachineN]]" % sys.argv[
-        0
-    ]
-    print " where; -\n   -cX              send count timestamp requests with pause separation"
-    print "   -C or --correction   disable naive half RTT correction to time difference"
-    print "   -d or --dgram    selects SOCK_DGRAM socket instead of SOCK_RAW socket"
-    print "   -D or --debug    prints out Debug information"
-    print "   -fABC.DEF        specify target machines in a text file"
-    print "   -h or --help     outputs this usage message"
-    print "   -H or --hours    sets output format to HH:MM:SS.SSS"
-    print "   -m or --microsoft  reverses byte order of timestamp reply (suits remote MS Windows)"
-    print "   -M or --milliseconds  sets output format to milliseconds"
-    print "   -pX.X            pause X.X sec between multiple timestamp requests"
-    print "   -P or --no-ping  don't send ICMP echo request"
-    print "   -q or --quiet    prints difference output value and units, but nothing else"
-    print "   -r or --raw      selects SOCK_RAW but is over-ridden by -d or --dgram"
-    print "   -s or --standard suggests normal byte order of timestamps be used"
-    print "   -T or --no-time-stamp  don't send ICMP time stamp request"
-    print "   -v or --verbose  prints verbose output"
-    print "   -wX.X            wait X.X sec instead of default 2 sec before timing-out"
-    print "   targetMachine is either the name or IP address of the computer to ping"
-    print " E.g.; -"
-    print "   ", sys.argv[0], " -v www.python.org"
+    print(
+        "Usage:\n%s [-cXCdDfA.ZhHmMpX.XPqrsTvwX.X] [targetMachine ..[targetMachineN]]"
+        % sys.argv[0]
+    )
+    print(
+        " where; -\n   -cX              send count timestamp requests with pause separation"
+    )
+    print(
+        "   -C or --correction   disable naive half RTT correction to time difference"
+    )
+    print("   -d or --dgram    selects SOCK_DGRAM socket instead of SOCK_RAW socket")
+    print("   -D or --debug    prints out Debug information")
+    print("   -fABC.DEF        specify target machines in a text file")
+    print("   -h or --help     outputs this usage message")
+    print("   -H or --hours    sets output format to HH:MM:SS.SSS")
+    print(
+        "   -m or --microsoft  reverses byte order of timestamp reply (suits remote MS Windows)"
+    )
+    print("   -M or --milliseconds  sets output format to milliseconds")
+    print("   -pX.X            pause X.X sec between multiple timestamp requests")
+    print("   -P or --no-ping  don't send ICMP echo request")
+    print(
+        "   -q or --quiet    prints difference output value and units, but nothing else"
+    )
+    print("   -r or --raw      selects SOCK_RAW but is over-ridden by -d or --dgram")
+    print("   -s or --standard suggests normal byte order of timestamps be used")
+    print("   -T or --no-time-stamp  don't send ICMP time stamp request")
+    print("   -v or --verbose  prints verbose output")
+    print("   -wX.X            wait X.X sec instead of default 2 sec before timing-out")
+    print("   targetMachine is either the name or IP address of the computer to ping")
+    print(" E.g.; -")
+    print("   ", sys.argv[0], " -v www.python.org")
 
 
 # Get options and arguments from the command line
@@ -1003,7 +1034,7 @@ def processCommandLine():
             ],
         )
     except getopt.GetoptError as err:
-        print str(err)
+        print(str(err))
         usage()
         sys.exit(1)  # Indicate unsuccessful to shell, if there is one.
     for o, a in opts:
@@ -1073,13 +1104,14 @@ def pingAndPrintTimeStamp(trgtAddr, startTime, pid):
             ):  # If Ping fails then the travel time is deliberately set large
                 if options["verbose"]:
                     printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
-                    print "ping round trip time was: %9.3f mS." % (travelTime * 1000)
+                    print("ping round trip time was: %9.3f mS." % (travelTime * 1000))
             else:
                 # If the verbose flag was specified then this print is superfluous
                 if not options["verbose"]:
                     printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
-                    print "ping failed (elapsed time %6.3f sec)" % (
-                        getClockTime() - startTime
+                    print(
+                        "ping failed (elapsed time %6.3f sec)"
+                        % (getClockTime() - startTime)
                     )
         # Get Timestamp from the specified computer count times with delay between attempts
         if not options["noTimeStamp"]:
@@ -1089,48 +1121,49 @@ def pingAndPrintTimeStamp(trgtAddr, startTime, pid):
                 )
                 if successful:
                     if not options["quiet"]:
-                        print '"%s" (%s) returned Transmit timestamp' % (
-                            trgtAddr,
-                            trgtIP_Addr,
-                        ),
+                        print(
+                            '"%s" (%s) returned Transmit timestamp'
+                            % (trgtAddr, trgtIP_Addr),
+                            end=" ",
+                        )
                         printTimeStampAsHrsMinSecsUnlessMillisecsOptionIsInvoked(
                             timeStamps["transmit"]
                         )
-                        print
-                        print '"%s"' % trgtAddr,
+                        print()
+                        print('"%s"' % trgtAddr, end=" ")
                         printTimeStampAsMilliSecondsUnlessHoursOptionIsInvoked(
                             timeStamps["transmit"]
                         )
-                        print "-",
+                        print("-", end=" ")
                         printTimeStampAsMilliSecondsUnlessHoursOptionIsInvoked(
                             timeStamps["originate"]
                         )
                         if options["correction"]:
-                            print "-> difference: ",
+                            print("-> difference: ", end=" ")
                         else:
-                            print "-",
+                            print("-", end=" ")
                             printTimeStampAsMilliSecondsUnlessHoursOptionIsInvoked(
                                 timeStamps["compensation"]
                             )
-                            print "-> est'd difference: ",
+                            print("-> est'd difference: ", end=" ")
                     # Always output the difference value, even if --quiet is specified
                     printTimeStampAccordingToOptions(timeStamps["difference"])
                     printTimeStampUnitsAccordingToOptions(timeStamps["difference"])
-                    print
+                    print()
                 else:
                     returnValue += 1  # set return value to indicate a failure
                     # If the verbose flag was specified then this print is superfluous
                     if not options["verbose"]:
                         printTargetNameAndOrIP_Address(trgtAddr, trgtIP_Addr)
-                        print "timestamp acquisition failed"
+                        print("timestamp acquisition failed")
                 if cnt + 1 < options["count"]:
                     _time.sleep(options["pause"])
         return returnValue
-    except _socket.gaierror, msg:
-        print '"%s" Target Name problem: %s' % (trgtAddr, msg)
+    except _socket.gaierror as msg:
+        print('"%s" Target Name problem: %s' % (trgtAddr, msg))
         return 1
-    except _socket.error, msg:
-        print '"%s" Target Computer problem: %s' % (trgtAddr, msg)
+    except _socket.error as msg:
+        print('"%s" Target Computer problem: %s' % (trgtAddr, msg))
         return 1
 
 
@@ -1139,22 +1172,22 @@ def main():
     process_id = os.getpid() & 0xFFFF
     args = processCommandLine()
     if options["debug"]:
-        print
+        print()
     if options["debug"] or options["verbose"]:
-        print "checktime.py 0v18, Dec 2020"
+        print("checktime.py 0v19, Jan 2021")
     if options["debug"]:
-        print "\nCheck the time on one or more networked devices"
-        print '\n"%s" Python script running on system type "%s"' % (
-            sys.argv[0],
-            sys.platform,
+        print("\nCheck the time on one or more networked devices")
+        print(
+            '\n"%s" Python script running on system type "%s"'
+            % (sys.argv[0], sys.platform)
         )
-        print '\nArgument List "%s"\nbeing executed by Python version "%s"' % (
-            sys.argv,
-            sys.version,
+        print(
+            '\nArgument List "%s"\nbeing executed by Python version "%s"'
+            % (sys.argv, sys.version)
         )
-        print '\n"%s" (truncated) process identifier is 0x%04x' % (
-            sys.argv[0],
-            process_id,
+        print(
+            '\n"%s" (truncated) process identifier is 0x%04x'
+            % (sys.argv[0], process_id)
         )
     #
     args = processCommandLine()
@@ -1165,11 +1198,11 @@ def main():
     # default to ping the local interface
     if (len(options["file"]) < 1) & (len(args) < 1):
         if not options["help"]:
-            print "\n?? Please specify the computer to ping?\n"
+            print("\n?? Please specify the computer to ping?\n")
         usage()
         if not options["help"]:
             localInterface = getLocalIP()
-            print "\nDefaulting to ping the local interface (%s)" % localInterface
+            print("\nDefaulting to ping the local interface (%s)" % localInterface)
             errorCount = pingAndPrintTimeStamp(
                 localInterface, getClockTime(), process_id
             )  # If there is no target specified then use local Interface IP
@@ -1180,11 +1213,11 @@ def main():
     # Step through timestamp targets from a file specified with the -f option
     if len(options["file"]) > 0:
         if options["debug"]:
-            print 'Reading machine names from file named "%s"' % options["file"]
+            print('Reading machine names from file named "%s"' % options["file"])
         with open(options["file"]) as f:
             for trgtAddr in f:
                 if options["debug"]:
-                    print 'Read machine name "%s" from file' % trgtAddr.strip()
+                    print('Read machine name "%s" from file' % trgtAddr.strip())
                 if (len(trgtAddr.strip()) > 0) & (trgtAddr[0] != "#"):
                     errorCount += pingAndPrintTimeStamp(
                         trgtAddr.strip(), getClockTime(), process_id
@@ -1194,13 +1227,14 @@ def main():
     for trgtAddr in args:
         errorCount += pingAndPrintTimeStamp(trgtAddr, getClockTime(), process_id)
     if options["debug"]:
-        print
+        print()
     if options["debug"] or options["verbose"]:
-        print "checktime.py execution time was: %9.3f mS." % (
-            (getClockTime() - startTime) * 1000
+        print(
+            "checktime.py execution time was: %9.3f mS."
+            % ((getClockTime() - startTime) * 1000)
         )
     if options["debug"]:
-        print
+        print()
     sys.exit(
         errorCount
     )  # Indicate success or number of failures to shell, if there is one.
