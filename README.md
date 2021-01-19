@@ -77,11 +77,15 @@ cFos Software GmbH. There maybe other Windows software out there that is more sp
 the time difference between machines, but I am not aware of any. There are also no Apple specific
 programs using ICMP timestamp, that I am aware of. 
 
-checktime.py appears to work on the following systems; -
+checktime.py releases from v1.0 to v1.02 (i.e. python2 code) appear to work on the following systems; -
 ```
 Ubuntu 18.04 LTS with Python version 2.7.17
 Apple macOS 10.13.6 (High Sierra) with Python version 2.7.16
 Microsoft Windows 10.0.19042.685 and Python version 2.7.14
+```
+checktime.py release v1.03 (i.e. python3 code) appears to work on just the following system; -
+```
+Ubuntu 20.04-1 LTS with Python version 3.8.5
 ```
 checktime.py and associated files can be downloaded from; -
 https://github.com/dutchLuck/checktime/
@@ -95,6 +99,3 @@ Further reading; -
 ( viewed at https://flylib.com/books/en/3.223.1.79/1/ )
 2. Sundials in the Shade - An Internet-wide Perspective on ICMP Timestamps by E.C. Rye and R. Beverly
 ( viewed as PDF from https://rbeverly.net/research/papers/sundials-pam19.pdf )
-
-
-
