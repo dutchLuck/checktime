@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Mon Jan 18 22:43:12 2021
+# Last Modified on Tue Jan 19 22:10:12 2021
 #
 
 #
@@ -78,11 +78,11 @@ def calcTimeSinceUTC_Midnight():
 
 
 # Convert milliseconds to hours, minutes and seconds format
-def convertMillisecondsSinceMidnight(milliseconds):
-    msecs = milliseconds % 1000
-    hrs = milliseconds / 3600000
-    mins = (milliseconds - (hrs * 3600000)) / 60000
-    secs = (milliseconds - (hrs * 3600000 + mins * 60000)) / 1000
+def convertMillisecondsSinceMidnightToHMS(milliseconds):
+    msecs = int( milliseconds % 1000 )
+    hrs = int( milliseconds / 3600000 )
+    mins = int( (milliseconds - (hrs * 3600000)) / 60000 )
+    secs = int( (milliseconds - (hrs * 3600000 + mins * 60000)) / 1000 )
     mS_Time = {"hours": hrs, "minutes": mins, "seconds": secs, "milliSeconds": msecs}
     return mS_Time
 
@@ -134,9 +134,9 @@ def printDataStringInHex(dataString):
     length = len(dataString)
     for cnt in range(0, length, 1):
         if (cnt % 16) == 0:
-            print("\n%04u: %02x" % (cnt, ord(dataString[cnt])), end=" ")
+            print("\n%04u: %02x" % (cnt, dataString[cnt]), end=" ")
         else:
-            print("%02x" % ord(dataString[cnt]), end=" ")
+            print("%02x" % dataString[cnt], end=" ")
     print()
 
 
@@ -338,14 +338,14 @@ def printTimeStampAsHrsMinSecsSinceMidnight(timeStamp):
         print("00:00:00.000", end=" ")
     elif timeStamp < 0:
         timeStamp = abs(timeStamp)
-        tsTm = convertMillisecondsSinceMidnight(abs(timeStamp))
+        tsTm = convertMillisecondsSinceMidnightToHMS(abs(timeStamp))
         print(
             "-%02ld:%02ld:%02ld.%03ld"
             % (tsTm["hours"], tsTm["minutes"], tsTm["seconds"], tsTm["milliSeconds"]),
             end=" ",
         )
     else:
-        tsTm = convertMillisecondsSinceMidnight(timeStamp)
+        tsTm = convertMillisecondsSinceMidnightToHMS(timeStamp)
         print(
             "%02ld:%02ld:%02ld.%03ld"
             % (tsTm["hours"], tsTm["minutes"], tsTm["seconds"], tsTm["milliSeconds"]),
@@ -1174,7 +1174,7 @@ def main():
     if options["debug"]:
         print()
     if options["debug"] or options["verbose"]:
-        print("checktime.py 0v20, Jan 2021")
+        print("checktime.py 0v21, Jan 2021")
     if options["debug"]:
         print("\nCheck the time on one or more networked devices")
         print(
