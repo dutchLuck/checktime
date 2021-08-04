@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Tue Jan 19 22:10:12 2021
+# Last Modified on Wed Aug  4 22:40:21 2021
 #
 
 #
@@ -79,10 +79,10 @@ def calcTimeSinceUTC_Midnight():
 
 # Convert milliseconds to hours, minutes and seconds format
 def convertMillisecondsSinceMidnightToHMS(milliseconds):
-    msecs = int( milliseconds % 1000 )
-    hrs = int( milliseconds / 3600000 )
-    mins = int( (milliseconds - (hrs * 3600000)) / 60000 )
-    secs = int( (milliseconds - (hrs * 3600000 + mins * 60000)) / 1000 )
+    msecs = int(milliseconds % 1000)
+    hrs = int(milliseconds / 3600000)
+    mins = int((milliseconds - (hrs * 3600000)) / 60000)
+    secs = int((milliseconds - (hrs * 3600000 + mins * 60000)) / 1000)
     mS_Time = {"hours": hrs, "minutes": mins, "seconds": secs, "milliSeconds": msecs}
     return mS_Time
 
@@ -1174,7 +1174,7 @@ def main():
     if options["debug"]:
         print()
     if options["debug"] or options["verbose"]:
-        print("checktime.py 0v21, Jan 2021")
+        print("checktime.py 0v22, Aug 2021")
     if options["debug"]:
         print("\nCheck the time on one or more networked devices")
         print(
@@ -1189,8 +1189,6 @@ def main():
             '\n"%s" (truncated) process identifier is 0x%04x'
             % (sys.argv[0], process_id)
         )
-    #
-    args = processCommandLine()
     #
     errorCount = 0
     #
