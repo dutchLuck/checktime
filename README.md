@@ -98,4 +98,4 @@ Further reading; -
 1. ICMP Timestamp Request and Reply  (section 6.4 from TCP/IP Illustrated Vol 1 by W.R. Stevens)
 ( viewed at https://flylib.com/books/en/3.223.1.79/1/ )
 2. Sundials in the Shade - An Internet-wide Perspective on ICMP Timestamps by E.C. Rye and R. Beverly
-( viewed as PDF from https://rbeverly.net/research/papers/sundials-pam19.pdf )
+( viewed as PDF, downloaded from https://arxiv.org/abs/1903.08294 )
