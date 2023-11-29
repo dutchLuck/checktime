@@ -4,7 +4,7 @@
 #
 # Check the time on another device or computer on the network.
 #
-# Last Modified on Wed Aug  4 22:40:21 2021
+# Last Modified on Tue Nov 28 17:44:41 2023
 #
 
 #
@@ -22,7 +22,7 @@ import os  # getpid()
 import sys  # exit()
 import getopt  # getopt()
 
-# RFC 792 (ICMP) Message types
+# ICMP Message types (RFC 792)
 ICMP_ECHO_REPLY = 0
 ICMP_DESTINATION_UNREACHABLE = 3
 ICMP_SOURCE_QUENCH = 4
@@ -34,6 +34,25 @@ ICMP_TIMESTAMP_REQUEST = 13
 ICMP_TIMESTAMP_REPLY = 14
 ICMP_INFORMATION_REQUEST = 15
 ICMP_INFORMATION_REPLY = 16
+ICMP_ADDRESSMASK_REQUEST = 17
+ICMP_ADDRESSMASK_REPLY = 18
+
+IP4_PROTOCOL_ICMP_CODE = 1
+IP4_PROTOCOL_IGMP_CODE = 2
+IP4_PROTOCOL_TCP_CODE = 6
+IP4_PROTOCOL_UDP_CODE = 17
+IP4_PROTOCOL_ENCAP_CODE = 41
+IP4_PROTOCOL_OSPF_CODE = 89
+IP4_PROTOCOL_SCTP_CODE = 132
+
+IP4_PROTOCOL_ICMP_DESCRIPTION = "Internet Control Message Protocol (ICMP)"
+IP4_PROTOCOL_IGMP_DESCRIPTION = "Internet Group Management Protocol (IGMP)"
+IP4_PROTOCOL_TCP_DESCRIPTION = "Transmission Control Protocol (TCP)"
+IP4_PROTOCOL_UDP_DESCRIPTION = "User Datagram Protocol (UDP)"
+IP4_PROTOCOL_ENCAP_DESCRIPTION = "IPv6 encapsulation (ENCAP)"
+IP4_PROTOCOL_OSPF_DESCRIPTION = "Open Shortest Path First (OSPF)"
+IP4_PROTOCOL_SCTP_DESCRIPTION = "Stream Control Transmission Protocol (SCTP)"
+
 
 _d_size = struct.calcsize("d")
 options = {
@@ -161,6 +180,25 @@ def compareDataStrings(dataStr1, dataStr2):
     return result
 
 
+def getIP4_ProtocolDescription(ip4_ProtocolCode):
+    if ip4_ProtocolCode == IP4_PROTOCOL_ICMP_CODE:
+        return(IP4_PROTOCOL_ICMP_DESCRIPTION)
+    elif ip4_ProtocolCode == IP4_PROTOCOL_IGMP_CODE:
+        return(IP4_PROTOCOL_IGMP_DESCRIPTION)
+    elif ip4_ProtocolCode == IP4_PROTOCOL_TCP_CODE:
+        return(IP4_PROTOCOL_TCP_DESCRIPTION)
+    elif ip4_ProtocolCode == IP4_PROTOCOL_UDP_CODE:
+        return(IP4_PROTOCOL_UDP_DESCRIPTION)
+    elif ip4_ProtocolCode == IP4_PROTOCOL_ENCAP_CODE:
+        return(IP4_PROTOCOL_ENCAP_DESCRIPTION)
+    elif ip4_ProtocolCode == IP4_PROTOCOL_OSPF_CODE:
+        return(IP4_PROTOCOL_OSPF_DESCRIPTION)
+    elif ip4_ProtocolCode == IP4_PROTOCOL_SCTP_CODE:
+        returns(IP4_PROTOCOL_SCTP_DESCRIPTION)
+    else:
+        return("Unknown IPv4 protocol type")
+
+
 # Print the header part of a version 4 IP packet
 def printIP4_Header(header):
     print("IP ver .. ", header["ver"])
@@ -170,7 +208,7 @@ def printIP4_Header(header):
     print("id ..... 0x%04x " % header["pkt_id"])
     print("frag ... 0x%04x " % header["frag"])
     print("ttl ....", header["ttl"])
-    print("proto .. 0x%02x " % header["prot"])
+    print("proto .. 0x%02x (%s)" % (header["prot"], getIP4_ProtocolDescription(header["prot"])))
     print("csum ... 0x%04x " % header["csum"])
     print(
         "src IP . %03u.%03u.%03u.%03u"
@@ -245,13 +283,11 @@ def parseAndCheckIP4_PacketHeader(data, optns):
     parsedIPv4_Hdr, parsedIPv4_Payload = parseIP4_PacketHeader(data, options)
     # Check to see if the local interface is being used; i.e. src == dest
     srcAddr, destAddr = struct.unpack("!LL", data[12:20])
-    # If local interface then don't check the checksum of the packet
-    if srcAddr == destAddr:
-        chckSum = 0
-    else:
-        chckSum = calcChecksum(data)
+    chckSum = calcChecksum(data)
+    # If local interface then don't report the checksum of the packet unless debug is active
     if chckSum != 0:
-        print("\n?? The IPv4 packet check sum calculates to 0x%04x not zero" % chckSum)
+        if optns["debug"] or optns["verbose"] or (srcAddr != destAddr):
+            print("\n?? The IPv4 packet check sum calculates to 0x%04x not zero" % chckSum)
     if optns["debug"]:
         print("The header of the IPv4 packet received was; -")
         printIP4_Header(parsedIPv4_Hdr)
@@ -259,8 +295,39 @@ def parseAndCheckIP4_PacketHeader(data, optns):
     return parsedIPv4_Hdr, parsedIPv4_Payload
 
 
+def getICMP_TypeDescription(icmpTypeCode):
+    if icmpTypeCode == ICMP_ECHO_REPLY:
+        return("Echo Reply")
+    elif icmpTypeCode == ICMP_DESTINATION_UNREACHABLE:
+        return("Destination Unreachable")
+    elif icmpTypeCode == ICMP_SOURCE_QUENCH:
+        return("Source Quench")
+    elif icmpTypeCode == ICMP_REDIRECT:
+        return("Redirect")
+    elif icmpTypeCode == ICMP_ECHO_REQUEST:
+        return("Echo Request")
+    elif icmpTypeCode == ICMP_TIME_EXCEEDED:
+        return("Time Exceeded")
+    elif icmpTypeCode == ICMP_PARAMETER_PROBLEM:
+        returns("Parameter")
+    elif icmpTypeCode == ICMP_TIMESTAMP_REQUEST:
+        return("Timestamp Request")
+    elif icmpTypeCode == ICMP_TIMESTAMP_REPLY:
+        return("Timestamp Reply")
+    elif icmpTypeCode == ICMP_INFORMATION_REQUEST:
+        return("Information Request")
+    elif icmpTypeCode == ICMP_INFORMATION_REPLY:
+        return("Information Reply")
+    elif icmpTypeCode == ICMP_ADDRESSMASK_REQUEST:
+        return("Address Mask Request")
+    elif icmpTypeCode == ICMP_ADDRESSMASK_REPLY:
+        return("Address Mask Reply")
+    else:
+        return("Unknown ICMP type")
+
+
 def printICMP_Header(header):
-    print("ICMP type ... 0x%02x " % header["ICMP_Type"])
+    print("ICMP type ... 0x%02x (%s)" % ( header["ICMP_Type"], getICMP_TypeDescription(header["ICMP_Type"])))
     print("ICMP code ... 0x%02x " % header["code"])
     print("ICMP checksum 0x%04x " % header["checksum"])
     print("ICMP id ..... 0x%04x " % header["id"])
@@ -269,9 +336,9 @@ def printICMP_Header(header):
 
 
 def parseICMP_Data(data):
-    type, code, checksum, id, sequence = struct.unpack("!BBHHH", data[:8])
+    icmpType, code, checksum, id, sequence = struct.unpack("!BBHHH", data[:8])
     ICMP_Header = {
-        "ICMP_Type": type,
+        "ICMP_Type": icmpType,
         "code": code,
         "checksum": checksum,
         "id": id,
@@ -1174,7 +1241,7 @@ def main():
     if options["debug"]:
         print()
     if options["debug"] or options["verbose"]:
-        print("checktime.py 0v22, Aug 2021")
+        print("checktime.py 0v23, Nov 2023")
     if options["debug"]:
         print("\nCheck the time on one or more networked devices")
         print(
