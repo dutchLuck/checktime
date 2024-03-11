@@ -75,7 +75,16 @@ I do not know of an equivalent of clockdiff that is native to Microsoft Windows 
 program for Windows that can send ICMP timestamp requests and receive timestamp replies is hrPing from
 cFos Software GmbH. There maybe other Windows software out there that is more specific to determining
 the time difference between machines, but I am not aware of any. There are also no Apple specific
-programs using ICMP timestamp, that I am aware of. 
+programs using ICMP timestamp to determine time difference between machines, that I am aware of. The
+ping utility supplied with Apple macOS does have the capability to send and recieve ICMP timestamps
+with a command such as "ping -M time -s 0 <name of target machine>", but scripting it to determine
+time difference isn't all that attractive since Apple's ping truncates the displayed timestamps
+to whole seconds, and very few machines have clocks that are more than a second different from each
+other. Another alternative on macOS (and linux) is my
+<a href="https://github.com/dutchLuck/ping3">ping3</a>
+utility, which can be compiled and run on macOS/linux and can provide an estimate of time difference
+between machines with a command such as "ping3 -M time -v 1 <name of target machine>" or
+"ping3 -M timew -v 1 <name of target windows machine>".
 
 checktime.py releases from v1.0 to v1.02 (i.e. python2 code) appear to work on the following systems; -
 ```
